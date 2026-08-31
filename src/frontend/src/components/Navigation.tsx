@@ -26,8 +26,14 @@ export function Navigation() {
               <Link to="/search" className="hover:text-gray-300">
                 Search
               </Link>
+              <Link to="/market" className="hover:text-gray-300">
+                Market
+              </Link>
               <Link to="/portfolio" className="hover:text-gray-300">
                 Portfolio
+              </Link>
+              <Link to="/transactions" className="hover:text-gray-300">
+                Transactions
               </Link>
               <div className="flex items-center gap-3">
                 <span className="text-sm">{user?.email}</span>

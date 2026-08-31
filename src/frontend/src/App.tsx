@@ -7,6 +7,8 @@ import { Dashboard } from './pages/Dashboard';
 import { PropertySearch } from './pages/PropertySearch';
 import { PropertyDetail } from './pages/PropertyDetail';
 import { Portfolio } from './pages/Portfolio';
+import { MarketAnalysis } from './pages/MarketAnalysis';
+import { Transactions } from './pages/Transactions';
 
 function App() {
   const { checkAuth, isAuthenticated } = useAuthStore();
@@ -24,6 +26,8 @@ function App() {
         <Route path="/search" element={<PropertySearch />} />
         <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/portfolio" element={isAuthenticated ? <Portfolio /> : <Navigate to="/login" />} />
+        <Route path="/transactions" element={isAuthenticated ? <Transactions /> : <Navigate to="/login" />} />
+        <Route path="/market" element={<MarketAnalysis />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
