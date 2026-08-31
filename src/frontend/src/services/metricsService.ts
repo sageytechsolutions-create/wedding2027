@@ -122,7 +122,10 @@ export const metricsService = {
     success: boolean;
     alert: MetricAlert;
   }> {
-    return api.put(`/api/metrics/alerts/${alertId}/acknowledge`, {});
+    return api.put<{
+      success: boolean;
+      alert: MetricAlert;
+    }>(`/api/metrics/alerts/${alertId}/acknowledge`, {});
   },
 
   async updateMetric(

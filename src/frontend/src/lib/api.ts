@@ -61,6 +61,14 @@ export const api = {
     });
   },
 
+  put<T>(endpoint: string, data?: unknown, options?: RequestInit) {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  },
+
   delete(endpoint: string, options?: RequestInit) {
     return this.request(endpoint, { ...options, method: 'DELETE' });
   },

@@ -123,18 +123,23 @@ export class EmailController {
         return;
       }
 
-      const { recipient, template_id } = req.body;
+      const { portfolio_id, recipient_email, report_type = 'summary' } = req.body;
 
-      if (!recipient || !recipient.includes('@')) {
-        res.status(400).json({ error: 'Valid recipient email required' });
+      if (!portfolio_id || !recipient_email || !recipient_email.includes('@')) {
+        res.status(400).json({ error: 'portfolio_id and valid recipient_email required' });
         return;
       }
 
-      const result = await emailDeliveryService.sendTestEmail(recipient, template_id || 'summary-report');
+      if (!['summary', 'full', 'executive'].includes(report_type)) {
+        res.status(400).json({ error: 'Invalid report_type' });
+        return;
+      }
+
+      const result = await emailDeliveryService.sendTestEmail(recipient_email, `${report_type}-report`);
 
       res.json({
         success: result.status === 'sent',
-        message_id: result.messageId,
+        messageId: result.messageId,
         status: result.status,
         error: result.error,
       });

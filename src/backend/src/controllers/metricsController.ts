@@ -269,6 +269,78 @@ export class MetricsController {
       res.status(500).json({ error: 'Failed to acknowledge alert' });
     }
   }
+
+  async updateMetric(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const { metricId } = req.params;
+      const { name, description, formula_config, display_format, threshold_alert, is_favorite } = req.body;
+
+      const metric = await prisma.userMetric.findUnique({
+        where: { id: metricId },
+      });
+
+      if (!metric || metric.user_id !== req.user.id) {
+        res.status(404).json({ error: 'Metric not found' });
+        return;
+      }
+
+      const updated = await prisma.userMetric.update({
+        where: { id: metricId },
+        data: {
+          ...(name && { name }),
+          ...(description && { description }),
+          ...(formula_config && { formula_config }),
+          ...(display_format && { display_format }),
+          ...(threshold_alert !== undefined && { threshold_alert }),
+          ...(is_favorite !== undefined && { is_favorite }),
+        },
+      });
+
+      res.json({
+        success: true,
+        metric: updated,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update metric';
+      res.status(500).json({ error: message });
+    }
+  }
+
+  async deleteMetric(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const { metricId } = req.params;
+
+      const metric = await prisma.userMetric.findUnique({
+        where: { id: metricId },
+      });
+
+      if (!metric || metric.user_id !== req.user.id) {
+        res.status(404).json({ error: 'Metric not found' });
+        return;
+      }
+
+      await prisma.userMetric.delete({
+        where: { id: metricId },
+      });
+
+      res.json({
+        success: true,
+        message: 'Metric deleted',
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete metric' });
+    }
+  }
 }
 
 export const metricsController = new MetricsController();

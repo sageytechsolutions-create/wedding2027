@@ -136,8 +136,8 @@ export const emailService = {
 
   async verifyConnection(): Promise<{
     success: boolean;
-    message: string;
+    email_service: 'connected' | 'disconnected';
   }> {
-    return api.post('/api/email/verify-connection', {});
+    return api.get('/api/email/verify-connection');
   },
 };

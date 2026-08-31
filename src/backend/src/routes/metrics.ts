@@ -17,4 +17,8 @@ metricsRoutes.post('/alerts', (req, res) => metricsController.createAlert(req, r
 metricsRoutes.get('/alerts', (req, res) => metricsController.getAlerts(req, res));
 metricsRoutes.put('/alerts/:alertId/acknowledge', (req, res) => metricsController.acknowledgeAlert(req, res));
 
+// Metric management
+metricsRoutes.patch('/:metricId', (req, res) => metricsController.updateMetric(req, res));
+metricsRoutes.delete('/:metricId', (req, res) => metricsController.deleteMetric(req, res));
+
 export default metricsRoutes;
