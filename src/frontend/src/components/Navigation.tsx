@@ -26,6 +26,18 @@ export function Navigation() {
               <Link to="/search" className="hover:text-gray-300">
                 Search
               </Link>
+              <Link to="/recommendations" className="hover:text-gray-300">
+                Deals
+              </Link>
+              <Link to="/analytics" className="hover:text-gray-300">
+                Analytics
+              </Link>
+              <Link to="/compare" className="hover:text-gray-300">
+                Compare
+              </Link>
+              <Link to="/heatmap" className="hover:text-gray-300">
+                Heatmap
+              </Link>
               <Link to="/market" className="hover:text-gray-300">
                 Market
               </Link>
