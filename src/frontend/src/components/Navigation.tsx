@@ -50,6 +50,9 @@ export function Navigation() {
               <Link to="/transactions" className="hover:text-gray-300">
                 Transactions
               </Link>
+              <Link to="/settings" className="hover:text-gray-300">
+                ⚙️ Settings
+              </Link>
               <div className="flex items-center gap-3">
                 <span className="text-sm">{user?.email}</span>
                 <button

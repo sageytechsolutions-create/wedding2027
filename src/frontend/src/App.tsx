@@ -15,6 +15,7 @@ import { PortfolioAnalyticsEnhanced } from './pages/PortfolioAnalyticsEnhanced';
 import { PropertyComparison } from './pages/PropertyComparison';
 import { MarketHeatmap } from './pages/MarketHeatmap';
 import { CustomMetrics } from './pages/CustomMetrics';
+import { Settings } from './pages/Settings';
 
 function App() {
   const { checkAuth, isAuthenticated } = useAuthStore();
@@ -39,6 +40,7 @@ function App() {
         <Route path="/portfolio" element={isAuthenticated ? <Portfolio /> : <Navigate to="/login" />} />
         <Route path="/transactions" element={isAuthenticated ? <Transactions /> : <Navigate to="/login" />} />
         <Route path="/market" element={<MarketAnalysis />} />
+        <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
