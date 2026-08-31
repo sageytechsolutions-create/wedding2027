@@ -11,8 +11,10 @@ import { MarketAnalysis } from './pages/MarketAnalysis';
 import { Transactions } from './pages/Transactions';
 import { DealRecommendations } from './pages/DealRecommendations';
 import { PortfolioAnalytics } from './pages/PortfolioAnalytics';
+import { PortfolioAnalyticsEnhanced } from './pages/PortfolioAnalyticsEnhanced';
 import { PropertyComparison } from './pages/PropertyComparison';
 import { MarketHeatmap } from './pages/MarketHeatmap';
+import { CustomMetrics } from './pages/CustomMetrics';
 
 function App() {
   const { checkAuth, isAuthenticated } = useAuthStore();
@@ -30,7 +32,8 @@ function App() {
         <Route path="/search" element={<PropertySearch />} />
         <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/recommendations" element={isAuthenticated ? <DealRecommendations /> : <Navigate to="/login" />} />
-        <Route path="/analytics" element={isAuthenticated ? <PortfolioAnalytics /> : <Navigate to="/login" />} />
+        <Route path="/analytics" element={isAuthenticated ? <PortfolioAnalyticsEnhanced /> : <Navigate to="/login" />} />
+        <Route path="/metrics" element={isAuthenticated ? <CustomMetrics /> : <Navigate to="/login" />} />
         <Route path="/compare" element={isAuthenticated ? <PropertyComparison /> : <Navigate to="/login" />} />
         <Route path="/heatmap" element={isAuthenticated ? <MarketHeatmap /> : <Navigate to="/login" />} />
         <Route path="/portfolio" element={isAuthenticated ? <Portfolio /> : <Navigate to="/login" />} />
