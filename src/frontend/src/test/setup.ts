@@ -2,6 +2,16 @@ import '@testing-library/jest-dom';
 import { expect, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
+// Mock Supabase before importing anything that uses it
+vi.mock('../lib/supabase', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn(),
+      onAuthStateChange: vi.fn(),
+    },
+  },
+}));
+
 afterEach(() => {
   cleanup();
 });
