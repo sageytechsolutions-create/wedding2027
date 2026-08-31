@@ -10,6 +10,7 @@ from routes.valuation import router as valuation_router
 from routes.scoring import router as scoring_router
 from routes.recommendations import router as recommendations_router
 from routes.market import router as market_router
+from routes.models import router as models_router
 
 app = FastAPI(
     title="AI Real Estate Investment Service",
@@ -36,6 +37,7 @@ app.include_router(valuation_router, prefix="/api/ai/valuation", tags=["valuatio
 app.include_router(scoring_router, prefix="/api/ai/scoring", tags=["scoring"])
 app.include_router(recommendations_router, prefix="/api/ai/recommendations", tags=["recommendations"])
 app.include_router(market_router, prefix="/api/ai/market", tags=["market"])
+app.include_router(models_router, prefix="/api/ai/models", tags=["ml-models"])
 
 if __name__ == "__main__":
     import uvicorn
