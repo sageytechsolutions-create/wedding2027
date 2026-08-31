@@ -7,6 +7,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import propertyRoutes from './routes/properties.routes.js';
 import portfolioRoutes from './routes/portfolio.routes.js';
 import transactionRoutes from './routes/transactions.routes.js';
+import syncRoutes from './routes/sync.js';
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.get('/health', (req, res) => {
 app.use('/api/properties', propertyRoutes);
 app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/sync', syncRoutes);
 
 // 404 handler
 app.use((req, res) => {
