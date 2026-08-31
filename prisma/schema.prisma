@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  fullName          String?
+  profilePictureUrl String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  portfolioProperties PortfolioProperty[]
+  transactions        Transaction[]
+  favorites           Favorite[]
+
+  @@map("users")
+}
+
+model Property {
+  id                String    @id @default(cuid())
+  externalId        String?   @unique
+  address           String
+  city              String
+  state             String
+  zipCode           String
+  lat               Float?
+  lng               Float?
+  propertyType      String    // "single_family", "condo", "apartment", etc.
+  bedrooms          Int?
+  bathrooms         Float?
+  squareFeet        Int?
+  lotSize           Float?
+  yearBuilt         Int?
+  listPrice         Float?
+  estimatedValue    Float?
+  propertyImageUrl  String?
+  propertyDetails   Json?     // Raw data from external sources
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  portfolioProperties PortfolioProperty[]
+  transactions        Transaction[]
+  favorites           Favorite[]
+
+  @@map("properties")
+}
+
+model PortfolioProperty {
+  id                           String    @id @default(cuid())
+  userId                       String
+  user                         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId                   String
+  property                     Property  @relation(fields: [propertyId], references: [id])
+  acquisitionDate              DateTime
+  acquisitionPrice             Float
+  downPayment                  Float?
+  loanAmount                   Float?
+  interestRate                 Float?
+  annualPropertyTax            Float?
+  annualInsurance              Float?
+  annualMaintenanceEstimate    Float?
+  notes                        String?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
+
+  transactions Transaction[]
+
+  @@unique([userId, propertyId])
+  @@map("portfolio_properties")
+}
+
+model Transaction {
+  id                    String    @id @default(cuid())
+  portfolioPropertyId   String
+  portfolioProperty     PortfolioProperty @relation(fields: [portfolioPropertyId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId            String
+  property              Property  @relation(fields: [propertyId], references: [id])
+  transactionType       String    // "income", "expense", "mortgage"
+  category              String    // "rent_income", "property_tax", "insurance", etc.
+  amount                Float
+  date                  DateTime
+  description           String?
+  createdAt             DateTime  @default(now())
+
+  @@map("transactions")
+}
+
+model Favorite {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId  String
+  property    Property  @relation(fields: [propertyId], references: [id])
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, propertyId])
+  @@map("favorites")
+}
