@@ -8,6 +8,9 @@ import propertyRoutes from './routes/properties.routes.js';
 import portfolioRoutes from './routes/portfolio.routes.js';
 import transactionRoutes from './routes/transactions.routes.js';
 import syncRoutes from './routes/sync.js';
+import emailRoutes from './routes/email.js';
+import metricsRoutes from './routes/metrics.js';
+import reportRoutes from './routes/reports.js';
 
 const app = express();
 
@@ -37,6 +40,9 @@ app.use('/api/properties', propertyRoutes);
 app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/api/metrics', metricsRoutes);
+app.use('/api/reports', reportRoutes);
 
 // 404 handler
 app.use((req, res) => {
