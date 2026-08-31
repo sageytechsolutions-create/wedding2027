@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { useMetricsStore, CustomMetric } from '../store/metricsStore';
+import { metricsService } from '../services/metricsService';
 
 export function CustomMetrics() {
   const { isAuthenticated } = useAuthStore();
@@ -10,6 +11,9 @@ export function CustomMetrics() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const portfolioId = 'portfolio_default'; // TODO: Get from route params or portfolio store
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -27,35 +31,65 @@ export function CustomMetrics() {
     return null;
   }
 
-  const handleAddMetric = () => {
+  const handleAddMetric = async () => {
     if (!formData.name) {
-      alert('Please enter a metric name');
+      setError('Please enter a metric name');
       return;
     }
 
-    const newMetric: Omit<CustomMetric, 'id' | 'createdAt' | 'updatedAt'> = {
-      name: formData.name,
-      description: formData.description,
-      formulaType: formData.formulaType,
-      ...(formData.formulaType === 'sum' && { field: formData.field }),
-      ...(formData.formulaType === 'average' && { field: formData.field }),
-      ...(formData.formulaType === 'ratio' && {
-        numeratorField: formData.numeratorField,
-        denominatorField: formData.denominatorField,
-      }),
-      ...(formData.formulaType === 'formula' && { formula: formData.formula }),
-      displayFormat: formData.displayFormat,
-      ...(formData.thresholdAlert && { thresholdAlert: parseFloat(formData.thresholdAlert) }),
-    };
+    setLoading(true);
+    setError(null);
 
-    if (editingId) {
-      updateMetric(editingId, newMetric);
-      setEditingId(null);
-    } else {
-      addMetric(newMetric);
+    try {
+      const formulaConfig: Record<string, any> = {};
+
+      if (formData.formulaType === 'sum' || formData.formulaType === 'average') {
+        formulaConfig.field = formData.field;
+      } else if (formData.formulaType === 'ratio') {
+        formulaConfig.numeratorField = formData.numeratorField;
+        formulaConfig.denominatorField = formData.denominatorField;
+      } else if (formData.formulaType === 'formula') {
+        formulaConfig.formula = formData.formula;
+      }
+
+      const result = await metricsService.calculateMetric({
+        metric_id: editingId || undefined,
+        portfolio_id: portfolioId,
+        name: formData.name,
+        formula_type: formData.formulaType,
+        formula_config: formulaConfig,
+        display_format: formData.displayFormat,
+      });
+
+      const newMetric: Omit<CustomMetric, 'createdAt' | 'updatedAt'> = {
+        id: result.metric.id,
+        name: formData.name,
+        description: formData.description,
+        formulaType: formData.formulaType,
+        ...(formData.formulaType === 'sum' && { field: formData.field }),
+        ...(formData.formulaType === 'average' && { field: formData.field }),
+        ...(formData.formulaType === 'ratio' && {
+          numeratorField: formData.numeratorField,
+          denominatorField: formData.denominatorField,
+        }),
+        ...(formData.formulaType === 'formula' && { formula: formData.formula }),
+        displayFormat: formData.displayFormat,
+        ...(formData.thresholdAlert && { thresholdAlert: parseFloat(formData.thresholdAlert) }),
+      };
+
+      if (editingId) {
+        updateMetric(editingId, newMetric);
+        setEditingId(null);
+      } else {
+        addMetric(newMetric);
+      }
+
+      resetForm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save metric');
+    } finally {
+      setLoading(false);
     }
-
-    resetForm();
   };
 
   const handleEditMetric = (metric: CustomMetric) => {
@@ -135,6 +169,12 @@ export function CustomMetrics() {
                 ✕
               </button>
             </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
+            )}
 
             <div className="space-y-6">
               {/* Basic Info */}
@@ -272,13 +312,15 @@ export function CustomMetrics() {
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                   onClick={handleAddMetric}
-                  className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                  disabled={loading}
+                  className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingId ? 'Update Metric' : 'Create Metric'}
+                  {loading ? 'Saving...' : editingId ? 'Update Metric' : 'Create Metric'}
                 </button>
                 <button
                   onClick={resetForm}
-                  className="flex-1 px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                  disabled={loading}
+                  className="flex-1 px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>

@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { emailService } from '../services/emailService';
 
 interface EmailScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSchedule: (config: EmailScheduleConfig) => void;
+  onSchedule?: (config: EmailScheduleConfig) => void;
+  portfolioId: string;
   portfolioName?: string;
 }
 
@@ -17,7 +19,7 @@ interface EmailScheduleConfig {
   nextRun?: Date;
 }
 
-export function EmailScheduleModal({ isOpen, onClose, onSchedule, portfolioName = 'Portfolio' }: EmailScheduleModalProps) {
+export function EmailScheduleModal({ isOpen, onClose, onSchedule, portfolioId, portfolioName = 'Portfolio' }: EmailScheduleModalProps) {
   const [frequency, setFrequency] = useState<'weekly' | 'monthly' | 'quarterly' | 'once'>('weekly');
   const [dayOfWeek, setDayOfWeek] = useState('monday');
   const [dayOfMonth, setDayOfMonth] = useState(1);
@@ -25,6 +27,8 @@ export function EmailScheduleModal({ isOpen, onClose, onSchedule, portfolioName 
   const [reportType, setReportType] = useState<'summary' | 'full' | 'executive'>('summary');
   const [recipients, setRecipients] = useState<string[]>(['']);
   const [testEmailSent, setTestEmailSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleAddRecipient = () => {
     setRecipients([...recipients, '']);
@@ -40,36 +44,72 @@ export function EmailScheduleModal({ isOpen, onClose, onSchedule, portfolioName 
     setRecipients(newRecipients);
   };
 
-  const handleSchedule = () => {
+  const handleSchedule = async () => {
     const validRecipients = recipients.filter((r) => r.trim().length > 0);
     if (validRecipients.length === 0) {
-      alert('Please add at least one recipient email address');
+      setError('Please add at least one recipient email address');
       return;
     }
 
-    onSchedule({
-      frequency,
-      dayOfWeek: frequency === 'weekly' ? (dayOfWeek as any) : undefined,
-      dayOfMonth: frequency === 'monthly' ? dayOfMonth : undefined,
-      time,
-      reportType,
-      recipients: validRecipients,
-    });
+    setLoading(true);
+    setError(null);
 
-    resetForm();
-    onClose();
+    try {
+      await emailService.createSchedule({
+        portfolio_id: portfolioId,
+        frequency,
+        day_of_week: frequency === 'weekly' ? dayOfWeek : undefined,
+        day_of_month: frequency === 'monthly' ? dayOfMonth : undefined,
+        time_of_day: time,
+        report_type: reportType,
+        recipients: validRecipients,
+      });
+
+      if (onSchedule) {
+        onSchedule({
+          frequency,
+          dayOfWeek: frequency === 'weekly' ? (dayOfWeek as any) : undefined,
+          dayOfMonth: frequency === 'monthly' ? dayOfMonth : undefined,
+          time,
+          reportType,
+          recipients: validRecipients,
+        });
+      }
+
+      resetForm();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to schedule report');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSendTestEmail = () => {
+  const handleSendTestEmail = async () => {
     const validRecipients = recipients.filter((r) => r.trim().length > 0);
     if (validRecipients.length === 0) {
-      alert('Please add at least one recipient email address');
+      setError('Please add at least one recipient email address');
       return;
     }
 
-    console.log('Sending test email to:', validRecipients);
-    setTestEmailSent(true);
-    setTimeout(() => setTestEmailSent(false), 3000);
+    setLoading(true);
+    setError(null);
+
+    try {
+      for (const recipient of validRecipients) {
+        await emailService.sendTestEmail({
+          portfolio_id: portfolioId,
+          recipient_email: recipient,
+          report_type: reportType,
+        });
+      }
+      setTestEmailSent(true);
+      setTimeout(() => setTestEmailSent(false), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send test email');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -103,6 +143,11 @@ export function EmailScheduleModal({ isOpen, onClose, onSchedule, portfolioName 
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm font-medium text-red-800">{error}</p>
+            </div>
+          )}
           {/* Frequency Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-3">
@@ -251,9 +296,10 @@ export function EmailScheduleModal({ isOpen, onClose, onSchedule, portfolioName 
             <p className="text-sm font-medium text-gray-900 mb-3">Test Email Delivery</p>
             <button
               onClick={handleSendTestEmail}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+              disabled={loading}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {testEmailSent ? '✓ Test Email Sent' : 'Send Test Email'}
+              {loading ? 'Sending...' : testEmailSent ? '✓ Test Email Sent' : 'Send Test Email'}
             </button>
             <p className="text-xs text-gray-600 mt-2">
               Send a test report to verify recipients and formatting
@@ -286,15 +332,17 @@ Investment Platform`}
         <div className="bg-gray-50 border-t border-gray-200 p-6 sticky bottom-0 flex gap-3 justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition font-medium"
+            disabled={loading}
+            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={handleSchedule}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            disabled={loading}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Schedule Report
+            {loading ? 'Scheduling...' : 'Schedule Report'}
           </button>
         </div>
       </div>

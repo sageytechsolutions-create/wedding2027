@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
+import { reportService } from '../services/reportService';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -73,6 +74,7 @@ export function PortfolioAnalyticsEnhanced() {
   const [dateRange, setDateRange] = useState<'3m' | '6m' | '12m' | 'ytd' | 'all'>('12m');
   const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('line');
   const [exporting, setExporting] = useState(false);
+  const portfolioId = 'portfolio_default'; // TODO: Get from route params or portfolio store
 
   if (!isAuthenticated) {
     navigate('/login');
@@ -100,28 +102,19 @@ export function PortfolioAnalyticsEnhanced() {
   const handleExportPDF = async () => {
     setExporting(true);
     try {
-      const reportData: ReportPortfolioData = {
-        totalValue,
-        ytdROI: parseFloat(ytdROI),
-        annualizedReturns: parseFloat(annualizedReturns),
-        monthlyCashFlow,
-        properties: mockProperties.map((p) => ({
-          address: p.address,
-          city: p.city,
-          acquisitionDate: p.acquisitionDate,
-          costBasis: p.costBasis,
-          currentValue: p.currentValue,
-          gain: p.gain,
-          roi: p.roi,
-          annualRent: p.annualRent,
-          annualExpenses: p.annualExpenses,
-        })),
-        riskScore: 32,
-        diversificationScore: 78,
-      };
+      const response = await reportService.generateReport(portfolioId, 'full');
 
-      const generator = new ReportGenerator(reportData);
-      await generator.downloadPDF(`portfolio_report_${new Date().toISOString().split('T')[0]}.pdf`);
+      if (response.success && response.report.download_url) {
+        const blob = await reportService.downloadReport(response.report.id);
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `portfolio_report_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF report');
@@ -422,6 +415,7 @@ export function PortfolioAnalyticsEnhanced() {
       <EmailScheduleModal
         isOpen={showEmailModal}
         onClose={() => setShowEmailModal(false)}
+        portfolioId={portfolioId}
         onSchedule={handleEmailSchedule}
         portfolioName="Investment Portfolio"
       />
