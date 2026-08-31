@@ -5,6 +5,7 @@ import { Navigation } from './components/Navigation';
 import { Login } from './components/Login';
 import { Dashboard } from './pages/Dashboard';
 import { PropertySearch } from './pages/PropertySearch';
+import { PropertyDetail } from './pages/PropertyDetail';
 import { Portfolio } from './pages/Portfolio';
 
 function App() {
@@ -20,7 +21,8 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
-        <Route path="/search" element={isAuthenticated ? <PropertySearch /> : <Navigate to="/login" />} />
+        <Route path="/search" element={<PropertySearch />} />
+        <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/portfolio" element={isAuthenticated ? <Portfolio /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
