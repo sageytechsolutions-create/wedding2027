@@ -53,6 +53,9 @@ export function Navigation() {
               <Link to="/settings" className="hover:text-gray-300">
                 ⚙️ Settings
               </Link>
+              <Link to="/notifications" className="hover:text-gray-300">
+                🔔 Notifications
+              </Link>
               <div className="flex items-center gap-3">
                 <span className="text-sm">{user?.email}</span>
                 <button

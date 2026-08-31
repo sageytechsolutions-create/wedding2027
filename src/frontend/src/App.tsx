@@ -16,6 +16,7 @@ import { PropertyComparison } from './pages/PropertyComparison';
 import { MarketHeatmap } from './pages/MarketHeatmap';
 import { CustomMetrics } from './pages/CustomMetrics';
 import { Settings } from './pages/Settings';
+import { Notifications } from './pages/Notifications';
 
 function App() {
   const { checkAuth, isAuthenticated } = useAuthStore();
@@ -41,6 +42,7 @@ function App() {
         <Route path="/transactions" element={isAuthenticated ? <Transactions /> : <Navigate to="/login" />} />
         <Route path="/market" element={<MarketAnalysis />} />
         <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
+        <Route path="/notifications" element={isAuthenticated ? <Notifications /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
