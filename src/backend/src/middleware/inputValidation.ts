@@ -6,7 +6,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { addBreadcrumb, trackValidationError } from '../services/errorTracking';
+import { addBreadcrumb } from '../services/errorTracking';
 
 /**
  * Sanitize string input
@@ -245,7 +245,7 @@ export function validateEmailEndpoint(
   const email = req.body?.email;
 
   if (!email || !validateEmail(email)) {
-    trackValidationError('email', 'Invalid email format', email);
+    addBreadcrumb('email', 'Invalid email format', email);
     return res.status(400).json({
       error: { message: 'Invalid email format' },
     });
@@ -337,7 +337,7 @@ export function validatePasswordEndpoint(
   const validation = validatePasswordStrength(password);
 
   if (!validation.valid) {
-    trackValidationError('password', 'Weak password', undefined);
+    addBreadcrumb('password', 'Weak password', undefined);
     return res.status(400).json({
       error: {
         message: 'Password does not meet security requirements',

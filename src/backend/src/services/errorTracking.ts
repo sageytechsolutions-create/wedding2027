@@ -7,7 +7,6 @@
  */
 
 import * as Sentry from '@sentry/node';
-import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 export interface RequestContext {
   userId?: string;
@@ -48,10 +47,7 @@ export function initializeErrorTracking(isDev: boolean = false): void {
     // Performance monitoring
     tracesSampleRate: environment === 'production' ? 0.1 : 1.0,
 
-    // Profiling
-    profilesSampleRate: environment === 'production' ? 0.1 : 1.0,
     integrations: [
-      nodeProfilingIntegration(),
       new Sentry.Integrations.Http({ tracing: true }),
       new Sentry.Integrations.OnUncaughtException(),
       new Sentry.Integrations.OnUnhandledRejection(),
@@ -82,7 +78,6 @@ export function initializeErrorTracking(isDev: boolean = false): void {
 
   console.log('Sentry error tracking initialized', {
     environment,
-    profiling: true,
   });
 }
 
