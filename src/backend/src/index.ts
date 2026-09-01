@@ -3,6 +3,14 @@ import cors from 'cors';
 import { env, isDev } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
+// Security & Observability Middleware
+import { setupSecurityHeaders } from './middleware/securityHeaders.js';
+import { setupRateLimiting } from './middleware/rateLimiting.js';
+import { setupInputValidation } from './middleware/inputValidation.js';
+import { securityAuditMiddleware } from './middleware/securityAudit.js';
+import { setupSentryMiddleware, setupErrorHandling } from './middleware/sentryMiddleware.js';
+import { tracingMiddleware } from './services/tracing.js';
+
 // Routes
 import propertyRoutes from './routes/properties.routes.js';
 import portfolioRoutes from './routes/portfolio.routes.js';
@@ -14,13 +22,35 @@ import reportRoutes from './routes/reports.js';
 
 const app = express();
 
-// Middleware
+// Initialize Sentry first (error tracking)
+setupSentryMiddleware(app);
+
+// Core parsing middleware
 app.use(express.json());
+
+// Security: CORS with hardening
 app.use(
   cors({
     origin: process.env.NODE_ENV === 'production' ? [env.supabaseUrl] : '*',
+    credentials: true,
+    maxAge: 86400,
   })
 );
+
+// Security: HTTP Headers
+setupSecurityHeaders(app);
+
+// Security: Rate Limiting
+setupRateLimiting(app);
+
+// Security: Input Validation
+setupInputValidation(app);
+
+// Observability: Distributed Tracing
+app.use(tracingMiddleware);
+
+// Observability: Security Audit Logging
+app.use(securityAuditMiddleware);
 
 // Request logging (dev only)
 if (isDev) {
@@ -55,8 +85,9 @@ app.use((req, res) => {
   });
 });
 
-// Error handler (must be last)
+// Error handlers (must be last)
 app.use(errorHandler);
+setupErrorHandling(app);
 
 // Start server
 const port = env.port;
