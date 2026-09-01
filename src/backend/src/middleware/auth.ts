@@ -51,3 +51,6 @@ function extractToken(req: Request): string | null {
   }
   return authHeader.slice(7);
 }
+
+// Alias for backwards compatibility
+export const verifyAuth = requireAuth;
