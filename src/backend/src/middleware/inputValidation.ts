@@ -125,7 +125,7 @@ export function detectSqlInjection(input: string): boolean {
 
   // Check for common SQL injection patterns
   const sqlPatterns = [
-    /(['";)(--)|(\*|;|\|)/,
+    /(['"]|--|[*;|])/,
     /(\bOR\b.*=.*)/i,
     /(\bAND\b.*=.*)/i,
     /(1\s*=\s*1)/,

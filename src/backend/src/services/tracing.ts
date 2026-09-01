@@ -1,66 +1,40 @@
 /**
- * OpenTelemetry Tracing Service (Phase 7 Sprint 2)
+ * Tracing Service with Sentry Integration
  *
- * Distributed tracing setup for backend, enabling collection of spans
- * across services and integration with frontend tracing.
+ * Provides distributed tracing setup for backend using Sentry,
+ * enabling collection of spans and integration with frontend tracing.
  */
 
-import { trace, context, SpanStatusCode, defaultTextMapPropagator } from '@opentelemetry/api';
-import { Resource } from '@opentelemetry/resources';
-import {
-  SEMRESATTRS_SERVICE_NAME,
-  SEMRESATTRS_SERVICE_VERSION,
-} from '@opentelemetry/semantic-conventions';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
+import * as Sentry from '@sentry/node';
 
-let sdk: NodeSDK | null = null;
+let initialized = false;
 
 /**
- * Initialize OpenTelemetry tracing for backend
+ * Initialize tracing for backend
  */
 export function initializeTracing(isDev: boolean = false): void {
-  if (sdk) {
+  if (initialized) {
     console.warn('Tracing already initialized');
     return;
   }
 
-  const tracingEnabled = process.env.OTEL_ENABLED !== 'false';
+  const tracingEnabled = process.env.SENTRY_DSN !== undefined;
   if (!tracingEnabled) {
-    console.log('OpenTelemetry tracing disabled via environment variable');
+    console.log('Sentry tracing disabled - SENTRY_DSN not set');
     return;
   }
 
-  const resource = Resource.default().merge(
-    new Resource({
-      [SEMRESATTRS_SERVICE_NAME]:
-        process.env.OTEL_SERVICE_NAME || 'ai-realestate-backend',
-      [SEMRESATTRS_SERVICE_VERSION]: process.env.OTEL_SERVICE_VERSION || '1.0.0',
-      environment: isDev ? 'development' : 'production',
-    })
-  );
-
-  // Configure OTLP exporter
-  const collectorUrl = process.env.OTEL_COLLECTOR_URL || 'http://localhost:4317';
-  const exporter = new OTLPTraceExporter({
-    url: `${collectorUrl}/v1/traces`,
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: isDev ? 'development' : 'production',
+    tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+    attachStacktrace: true,
+    maxBreadcrumbs: 50,
   });
 
-  // Create SDK
-  sdk = new NodeSDK({
-    resource,
-    traceExporter: exporter,
-    instrumentations: [getNodeAutoInstrumentations()],
-  });
-
-  // Start SDK
-  sdk.start();
-
-  console.log('OpenTelemetry tracing initialized', {
-    serviceName: process.env.OTEL_SERVICE_NAME,
-    collectorUrl,
+  initialized = true;
+  console.log('Sentry tracing initialized', {
+    environment: isDev ? 'development' : 'production',
   });
 }
 
@@ -68,7 +42,7 @@ export function initializeTracing(isDev: boolean = false): void {
  * Get the tracer instance
  */
 export function getTracer(name: string, version?: string) {
-  return trace.getTracer(name, version);
+  return Sentry.getCurrentHub().getClient()?.getIntegration?.(Sentry.Integrations.Http);
 }
 
 /**
@@ -78,18 +52,14 @@ export function startSpan(
   name: string,
   attributes?: Record<string, string | number | boolean | undefined>
 ) {
-  const tracer = getTracer('ai-realestate-backend');
-  const span = tracer.startSpan(name);
-
-  if (attributes) {
-    Object.entries(attributes).forEach(([key, value]) => {
-      if (value !== undefined) {
-        span.setAttribute(key, value);
-      }
-    });
-  }
-
-  return span;
+  return Sentry.startSpan(
+    {
+      name,
+      op: 'custom',
+      attributes,
+    },
+    (span) => span
+  );
 }
 
 /**
@@ -100,22 +70,21 @@ export async function trackAsyncOperation<T>(
   operation: () => Promise<T>,
   attributes?: Record<string, string | number | boolean | undefined>
 ): Promise<T> {
-  const span = startSpan(name, attributes);
-
-  try {
-    const result = await operation();
-    span.setStatus({ code: SpanStatusCode.OK });
-    return result;
-  } catch (error) {
-    span.setStatus({
-      code: SpanStatusCode.ERROR,
-      message: error instanceof Error ? error.message : 'Unknown error',
-    });
-    span.recordException(error as Error);
-    throw error;
-  } finally {
-    span.end();
-  }
+  return Sentry.startSpan(
+    {
+      name,
+      op: 'custom',
+      attributes,
+    },
+    async () => {
+      try {
+        return await operation();
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
 }
 
 /**
@@ -126,22 +95,21 @@ export function trackSyncOperation<T>(
   operation: () => T,
   attributes?: Record<string, string | number | boolean | undefined>
 ): T {
-  const span = startSpan(name, attributes);
-
-  try {
-    const result = operation();
-    span.setStatus({ code: SpanStatusCode.OK });
-    return result;
-  } catch (error) {
-    span.setStatus({
-      code: SpanStatusCode.ERROR,
-      message: error instanceof Error ? error.message : 'Unknown error',
-    });
-    span.recordException(error as Error);
-    throw error;
-  } finally {
-    span.end();
-  }
+  return Sentry.startSpan(
+    {
+      name,
+      op: 'custom',
+      attributes,
+    },
+    () => {
+      try {
+        return operation();
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
 }
 
 /**
@@ -158,7 +126,6 @@ export async function trackHttpRequest<T>(
     {
       'http.method': method,
       'http.url': url,
-      'span.kind': 'client',
     }
   );
 }
@@ -177,7 +144,6 @@ export async function trackDatabaseOperation<T>(
     {
       'db.operation': operation,
       'db.name': dbName,
-      'span.kind': 'client',
     }
   );
 }
@@ -194,7 +160,6 @@ export async function trackAuthenticationOperation<T>(
     authenticate,
     {
       'auth.method': method,
-      'span.kind': 'internal',
     }
   );
 }
@@ -212,7 +177,6 @@ export async function trackBusinessOperation<T>(
     operation,
     {
       'business.type': operationType,
-      'span.kind': 'internal',
       ...metadata,
     }
   );
@@ -232,7 +196,6 @@ export async function trackExternalServiceCall<T>(
     {
       'service.name': serviceName,
       'service.endpoint': endpoint,
-      'span.kind': 'client',
     }
   );
 }
@@ -245,11 +208,14 @@ export function trackCacheOperation(
   key: string,
   hit?: boolean
 ): void {
-  const span = startSpan(`cache.${operation}`, {
-    'cache.key': key,
-    'cache.hit': hit ?? false,
+  Sentry.addBreadcrumb({
+    category: 'cache',
+    message: `Cache ${operation}: ${key}`,
+    level: 'info',
+    data: {
+      hit: hit ?? false,
+    },
   });
-  span.end();
 }
 
 /**
@@ -266,7 +232,6 @@ export async function trackQueueOperation<T>(
     {
       'queue.name': queueName,
       'queue.operation': operation,
-      'span.kind': 'client',
     }
   );
 }
@@ -278,98 +243,84 @@ export function addSpanEvent(
   message: string,
   attributes?: Record<string, string | number | boolean>
 ): void {
-  const span = trace.getActiveSpan();
-  if (span) {
-    span.addEvent(message, attributes);
-  }
+  Sentry.addBreadcrumb({
+    message,
+    level: 'info',
+    data: attributes,
+  });
 }
 
 /**
  * Set attribute on current span
  */
 export function setSpanAttribute(key: string, value: string | number | boolean): void {
-  const span = trace.getActiveSpan();
-  if (span) {
-    span.setAttribute(key, value);
-  }
+  Sentry.setContext('span', {
+    [key]: value,
+  });
 }
 
 /**
  * Record exception on current span
  */
 export function recordException(error: Error): void {
-  const span = trace.getActiveSpan();
-  if (span) {
-    span.recordException(error);
-  }
+  Sentry.captureException(error);
 }
 
 /**
  * Express middleware for automatic request tracing
  */
 export function tracingMiddleware(req: any, res: any, next: any) {
-  const span = startSpan(`http.${req.method.toLowerCase()}`, {
-    'http.method': req.method,
-    'http.url': req.originalUrl,
-    'http.target': req.path,
-    'http.host': req.hostname,
-    'http.scheme': req.protocol,
-    'http.client_ip': req.ip,
-  });
-
-  // Update span with response details
-  const originalSend = res.send;
-  res.send = function (data: any) {
-    span.setStatus({
-      code: res.statusCode < 400 ? SpanStatusCode.OK : SpanStatusCode.ERROR,
-    });
-    span.setAttribute('http.status_code', res.statusCode);
-    span.end();
-    return originalSend.call(this, data);
-  };
-
-  // Run operation in span context
-  context.with(trace.setSpan(context.active(), span), () => {
-    next();
-  });
+  Sentry.startSpan(
+    {
+      name: `http.${req.method.toLowerCase()}`,
+      op: 'http.server',
+      attributes: {
+        'http.method': req.method,
+        'http.url': req.originalUrl,
+        'http.target': req.path,
+        'http.host': req.hostname,
+        'http.scheme': req.protocol,
+        'http.client_ip': req.ip,
+      },
+    },
+    () => {
+      const originalSend = res.send;
+      res.send = function (data: any) {
+        res.status && Sentry.captureMessage(`${req.method} ${req.path} - ${res.statusCode}`);
+        return originalSend.call(this, data);
+      };
+      next();
+    }
+  );
 }
 
 /**
  * Propagate trace context to headers
- * Use this when making external requests
  */
 export function injectTraceContext(headers: Record<string, string>): void {
-  const span = trace.getActiveSpan();
-  if (span) {
-    defaultTextMapPropagator.inject(context.active(), headers, {
-      set: (carrier: any, key: string, value: string) => {
-        carrier[key] = value;
-      },
-    });
+  const traceId = Sentry.getCurrentHub().getClient()?.getTraceId?.();
+  if (traceId) {
+    headers['sentry-trace'] = traceId;
   }
 }
 
 /**
  * Extract trace context from headers
- * Use this when receiving requests from other services
  */
 export function extractTraceContext(headers: Record<string, string>): any {
-  return defaultTextMapPropagator.extract(context.active(), headers, {
-    get: (carrier: any, key: string) => {
-      return carrier[key];
-    },
-    keys: (carrier: any) => Object.keys(carrier),
-  });
+  return {
+    traceId: headers['sentry-trace'],
+  };
 }
 
 /**
  * Shutdown tracer provider
  */
 export async function shutdownTracing(): Promise<void> {
-  if (sdk) {
-    await sdk.shutdown();
-    sdk = null;
-    console.log('OpenTelemetry tracing shut down');
+  if (initialized) {
+    await Sentry.close(2000);
+    initialized = false;
+    console.log('Sentry tracing shut down');
   }
 }
 
