@@ -1,0 +1,268 @@
+groups:
+  - name: 'application_alerts'
+    interval: 30s
+    rules:
+      # High error rate alert (>5% of requests are errors)
+      - alert: HighErrorRate
+        expr: 'job:http_error_rate_percent:5m > 5'
+        for: 5m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: 'High error rate detected'
+          description: 'Error rate is {{ $value | humanizePercentage }} (threshold: 5%)'
+          dashboard: 'http://grafana:3000/d/app-performance'
+
+      # Critical error rate alert (>10% of requests are errors)
+      - alert: CriticalErrorRate
+        expr: 'job:http_error_rate_percent:5m > 10'
+        for: 2m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: 'CRITICAL: Error rate is critically high'
+          description: 'Error rate is {{ $value | humanizePercentage }} (critical threshold: 10%)'
+          runbook: 'https://wiki.internal/runbooks/high-error-rate'
+
+      # Slow endpoint alert (p95 latency > 1 second)
+      - alert: SlowEndpointLatency
+        expr: 'job:http_request_duration_seconds:p95 > 1'
+        for: 10m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: 'Slow endpoint latency detected'
+          description: 'P95 latency is {{ $value | humanizeDuration }} (threshold: 1s)'
+          dashboard: 'http://grafana:3000/d/app-performance'
+
+      # Very slow endpoint alert (p95 latency > 5 seconds)
+      - alert: VerySlowEndpointLatency
+        expr: 'job:http_request_duration_seconds:p95 > 5'
+        for: 5m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: 'CRITICAL: Endpoint latency is very high'
+          description: 'P95 latency is {{ $value | humanizeDuration }} (critical threshold: 5s)'
+          runbook: 'https://wiki.internal/runbooks/slow-endpoints'
+
+      # High request rate alert (>1000 requests/min)
+      - alert: HighRequestRate
+        expr: 'job:http_requests_total:rate1m * 60 > 1000'
+        for: 5m
+        labels:
+          severity: info
+          component: application
+        annotations:
+          summary: 'High request rate detected'
+          description: 'Request rate is {{ $value | humanize }}/min'
+
+  - name: 'database_alerts'
+    interval: 30s
+    rules:
+      # Database connection pool saturation
+      - alert: DatabaseConnectionPoolNearCapacity
+        expr: 'job:db_connections_saturation > 0.8'
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: 'Database connection pool is near capacity'
+          description: 'Connection pool saturation is {{ $value | humanizePercentage }} (threshold: 80%)'
+          dashboard: 'http://grafana:3000/d/system-health'
+
+      # Database connection pool exhaustion
+      - alert: DatabaseConnectionPoolExhausted
+        expr: 'job:db_connections_saturation > 0.95'
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: 'CRITICAL: Database connection pool is exhausted'
+          description: 'Connection pool saturation is {{ $value | humanizePercentage }}'
+          runbook: 'https://wiki.internal/runbooks/db-connection-exhaustion'
+
+      # Slow database queries
+      - alert: SlowDatabaseQueries
+        expr: 'job:db_query_duration_seconds:p95 > 1'
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: 'Slow database queries detected'
+          description: 'P95 query latency is {{ $value | humanizeDuration }} (threshold: 1s)'
+          dashboard: 'http://grafana:3000/d/system-health'
+
+      # High slow query rate
+      - alert: HighSlowQueryRate
+        expr: 'job:db_slow_queries:rate5m > 5'
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: 'High rate of slow database queries'
+          description: 'Slow query rate is {{ $value | humanize }}/sec (threshold: 5/sec)'
+
+  - name: 'cache_alerts'
+    interval: 30s
+    rules:
+      # Low cache hit rate
+      - alert: LowCacheHitRate
+        expr: 'job:cache_hit_rate_percent < 80'
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: 'Low cache hit rate'
+          description: 'Cache hit rate is {{ $value | humanizePercentage }} (threshold: 80%)'
+          dashboard: 'http://grafana:3000/d/system-health'
+
+  - name: 'system_alerts'
+    interval: 30s
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 'job:node_cpu_usage_percent:5m > 80'
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: 'High CPU usage detected'
+          description: 'CPU usage is {{ $value | humanizePercentage }} (threshold: 80%)'
+          dashboard: 'http://grafana:3000/d/system-health'
+
+      # Critical CPU usage
+      - alert: CriticalCPUUsage
+        expr: 'job:node_cpu_usage_percent:5m > 95'
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: 'CRITICAL: CPU usage is critical'
+          description: 'CPU usage is {{ $value | humanizePercentage }}'
+          runbook: 'https://wiki.internal/runbooks/high-cpu'
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: 'job:node_memory_usage_percent > 85'
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: 'High memory usage detected'
+          description: 'Memory usage is {{ $value | humanizePercentage }} (threshold: 85%)'
+          dashboard: 'http://grafana:3000/d/system-health'
+
+      # Critical memory usage
+      - alert: CriticalMemoryUsage
+        expr: 'job:node_memory_usage_percent > 95'
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: 'CRITICAL: Memory usage is critical'
+          description: 'Memory usage is {{ $value | humanizePercentage }}'
+          runbook: 'https://wiki.internal/runbooks/high-memory'
+
+      # High disk usage
+      - alert: HighDiskUsage
+        expr: 'job:node_disk_usage_percent > 80'
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: 'High disk usage detected'
+          description: 'Disk usage is {{ $value | humanizePercentage }} (threshold: 80%)'
+          dashboard: 'http://grafana:3000/d/system-health'
+
+      # Critical disk usage
+      - alert: CriticalDiskUsage
+        expr: 'job:node_disk_usage_percent > 95'
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: 'CRITICAL: Disk usage is critical'
+          description: 'Disk usage is {{ $value | humanizePercentage }}'
+          runbook: 'https://wiki.internal/runbooks/high-disk'
+
+  - name: 'business_alerts'
+    interval: 30s
+    rules:
+      # Low authentication success rate
+      - alert: LowAuthenticationSuccessRate
+        expr: 'job:auth_success_rate:5m < 95'
+        for: 5m
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: 'Low authentication success rate'
+          description: 'Auth success rate is {{ $value | humanizePercentage }} (threshold: 95%)'
+
+      # Low transaction success rate
+      - alert: LowTransactionSuccessRate
+        expr: 'job:transaction_success_rate:5m < 99'
+        for: 5m
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: 'Low transaction success rate'
+          description: 'Transaction success rate is {{ $value | humanizePercentage }} (threshold: 99%)'
+
+  - name: 'availability_alerts'
+    interval: 30s
+    rules:
+      # Service availability below SLA
+      - alert: ServiceAvailabilityBelowSLA
+        expr: 'job:service_availability:1h < 99.5'
+        for: 10m
+        labels:
+          severity: critical
+          component: availability
+        annotations:
+          summary: 'Service availability is below SLA'
+          description: 'Service availability is {{ $value | humanizePercentage }} (SLA: 99.5%)'
+          runbook: 'https://wiki.internal/runbooks/low-availability'
+
+      # Service down
+      - alert: ServiceDown
+        expr: 'up{job="ai-realestate-backend"} == 0'
+        for: 1m
+        labels:
+          severity: critical
+          component: availability
+        annotations:
+          summary: 'Service is down'
+          description: 'The ai-realestate-backend service is not responding'
+          runbook: 'https://wiki.internal/runbooks/service-down'
+
+  - name: 'prometheus_alerts'
+    interval: 30s
+    rules:
+      # Prometheus scrape failure
+      - alert: PrometheusScrapeFailure
+        expr: 'up{job!="prometheus"} == 0'
+        for: 5m
+        labels:
+          severity: warning
+          component: monitoring
+        annotations:
+          summary: 'Prometheus scrape failure'
+          description: 'Scrape failure detected for job {{ $labels.job }}'
