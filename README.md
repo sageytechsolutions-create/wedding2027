@@ -1,55 +1,154 @@
-# Table Nine
+# AI-Powered Real Estate Investment Platform
 
-Wedding planning app — guest list and RSVP, budget, vendors, seating floor plan,
-and the day-of schedule.
+A modern full-stack application for analyzing, discovering, and managing real estate investments with AI-powered insights.
 
-Stack: React 18 + Vite. No backend required to run.
+## Project Structure
 
-## Run locally
+```
+├── src/
+│   ├── backend/          # Node.js + Express backend
+│   │   ├── src/
+│   │   │   ├── config/   # Configuration files
+│   │   │   ├── routes/   # API routes
+│   │   │   ├── controllers/
+│   │   │   ├── services/ # Business logic
+│   │   │   └── middleware/
+│   │   └── package.json
+│   └── frontend/         # React + Vite frontend
+│       ├── src/
+│       │   ├── pages/    # Page components
+│       │   ├── components/
+│       │   ├── store/    # Zustand stores
+│       │   └── lib/      # Utility functions
+│       └── package.json
+├── prisma/               # Database schema
+└── .env.example          # Environment template
+```
 
-    npm install
-    npm run dev
+## Tech Stack
 
-## Deploy to Vercel
+### Frontend
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- Zustand (State Management)
+- React Router
 
-Option A — dashboard:
+### Backend
+- Node.js + Express
+- TypeScript
+- Prisma ORM
+- PostgreSQL/Supabase
+- Zod (Validation)
 
-1. Push this folder to a new GitHub repo.
-2. vercel.com → Add New → Project → import the repo.
-3. Vercel detects Vite automatically. Framework: Vite. Build: `npm run build`.
-   Output: `dist`. Leave the defaults alone.
-4. Deploy.
+### Authentication
+- Supabase Auth (Magic Link, Email/Password)
 
-Option B — CLI:
+## Getting Started
 
-    npm i -g vercel
-    vercel login
-    vercel --prod
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+- PostgreSQL database (or Supabase account for managed hosting)
 
-Both take about two minutes. No environment variables are needed for the
-current build.
+### Installation
 
-## Data
+1. **Clone and install dependencies:**
+   ```bash
+   npm install
+   ```
 
-Everything persists to `localStorage` in the browser, through the `db` object
-at the top of `src/App.jsx`. That is fine for a demo or a single couple, but it
-is per-device and per-browser.
+2. **Configure environment variables:**
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your Supabase credentials
+   ```
 
-To make it a real product, swap the two methods in `db` for Supabase calls. The
-exact code and the SQL for the table and its row-level security policy are in a
-comment block directly above `db`. Nothing else in the file touches storage, so
-that is the only edit.
+3. **Set up the database:**
+   ```bash
+   npm run db:migrate --workspace=src/backend
+   ```
 
-After that you will want, in rough order:
+### Running Locally
 
-1. Supabase Auth — email magic link is enough to start.
-2. Stripe Checkout + a `subscriptions` table for billing.
-3. A public RSVP page: a per-wedding slug that writes to the guests row without
-   requiring the guest to have an account.
+**Terminal 1 - Backend:**
+```bash
+npm run dev --workspace=src/backend
+```
+Backend runs on `http://localhost:3001`
 
-## Files
+**Terminal 2 - Frontend:**
+```bash
+npm run dev --workspace=src/frontend
+```
+Frontend runs on `http://localhost:5173`
 
-    index.html          entry
-    src/main.jsx        React mount
-    src/index.css       page background only; all app styles live in App.jsx
-    src/App.jsx         the entire application
+## API Endpoints (Phase 1)
+
+### Properties
+- `GET /api/properties` - Search properties
+- `GET /api/properties/:id` - Get property details
+- `POST /api/properties/:propertyId/favorites` - Add to favorites
+- `DELETE /api/properties/:propertyId/favorites` - Remove from favorites
+- `GET /api/properties/favorites` - Get favorite properties
+
+### Portfolio
+- `GET /api/portfolio` - Get user's portfolio
+- `GET /api/portfolio/summary` - Portfolio metrics
+- `GET /api/portfolio/:id` - Property details
+- `POST /api/portfolio` - Add property to portfolio
+- `PATCH /api/portfolio/:id` - Update property
+- `DELETE /api/portfolio/:id` - Remove property
+
+### Transactions
+- `POST /api/transactions` - Add transaction
+- `GET /api/transactions` - List transactions
+- `PATCH /api/transactions/:id` - Update transaction
+- `DELETE /api/transactions/:id` - Delete transaction
+- `GET /api/transactions/analytics/category-totals` - Category totals
+
+## Database Schema (Phase 1)
+
+### Core Tables
+- `users` - User accounts
+- `properties` - Property listings
+- `portfolio_properties` - User's owned properties
+- `transactions` - Income/expenses tracking
+- `favorites` - Bookmarked properties
+
+## Deployment
+
+### Frontend (Vercel)
+```bash
+npm run build --workspace=src/frontend
+# Deploy the dist/ folder to Vercel
+```
+
+### Backend (Render, Railway, or Fly.io)
+```bash
+npm run build --workspace=src/backend
+# Set DATABASE_URL and SUPABASE_* env vars
+# Deploy the src/backend directory
+```
+
+## Next Steps (Phase 2)
+
+- [ ] Set up Supabase project with authentication
+- [ ] Integrate real estate data APIs (Zillow, Redfin)
+- [ ] Build AI/ML service (Python FastAPI)
+- [ ] Implement property valuation model
+- [ ] Add investment scoring engine
+- [ ] Build deal recommendation system
+
+## Contributing
+
+Follow the existing code structure and style. All new features should include:
+- TypeScript types
+- Error handling
+- Input validation (Zod)
+- API documentation
+
+## License
+
+MIT

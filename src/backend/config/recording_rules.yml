@@ -1,0 +1,135 @@
+groups:
+  - name: 'application_metrics'
+    interval: 30s
+    rules:
+      # Request rate metrics
+      - record: 'job:http_requests_total:rate5m'
+        expr: 'rate(http_requests_total[5m])'
+
+      - record: 'job:http_requests_total:rate1m'
+        expr: 'rate(http_requests_total[1m])'
+
+      # Request latency percentiles
+      - record: 'job:http_request_duration_seconds:p50'
+        expr: 'histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))'
+
+      - record: 'job:http_request_duration_seconds:p95'
+        expr: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))'
+
+      - record: 'job:http_request_duration_seconds:p99'
+        expr: 'histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))'
+
+      # Error rate metrics
+      - record: 'job:http_requests_errors:rate5m'
+        expr: 'rate(http_requests_total{status=~"5.."}[5m])'
+
+      - record: 'job:http_requests_errors:rate1m'
+        expr: 'rate(http_requests_total{status=~"5.."}[1m])'
+
+      # Error rate percentage
+      - record: 'job:http_error_rate_percent:5m'
+        expr: 'rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100'
+
+      # Request success rate
+      - record: 'job:http_success_rate_percent:5m'
+        expr: 'rate(http_requests_total{status=~"2.."}[5m]) / rate(http_requests_total[5m]) * 100'
+
+  - name: 'database_metrics'
+    interval: 30s
+    rules:
+      # Database query rate
+      - record: 'job:db_queries_total:rate5m'
+        expr: 'rate(db_queries_total[5m])'
+
+      # Database query latency percentiles
+      - record: 'job:db_query_duration_seconds:p50'
+        expr: 'histogram_quantile(0.50, rate(db_query_duration_seconds_bucket[5m]))'
+
+      - record: 'job:db_query_duration_seconds:p95'
+        expr: 'histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m]))'
+
+      - record: 'job:db_query_duration_seconds:p99'
+        expr: 'histogram_quantile(0.99, rate(db_query_duration_seconds_bucket[5m]))'
+
+      # Slow query rate (queries > 1 second)
+      - record: 'job:db_slow_queries:rate5m'
+        expr: 'rate(db_query_duration_seconds_bucket{le="+Inf"}[5m]) - rate(db_query_duration_seconds_bucket{le="1"}[5m])'
+
+      # Connection pool saturation
+      - record: 'job:db_connections_saturation'
+        expr: 'pg_stat_activity_count / pg_settings_max_connections'
+
+  - name: 'cache_metrics'
+    interval: 30s
+    rules:
+      # Cache hit rate
+      - record: 'job:cache_hit_rate_percent'
+        expr: 'rate(cache_hits_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])) * 100'
+
+      # Cache operations rate
+      - record: 'job:cache_ops:rate5m'
+        expr: 'rate(cache_operations_total[5m])'
+
+  - name: 'business_metrics'
+    interval: 30s
+    rules:
+      # Properties listed per minute
+      - record: 'job:properties_listed:rate1m'
+        expr: 'rate(business_properties_listed_total[1m])'
+
+      # Search operations per minute
+      - record: 'job:searches_performed:rate1m'
+        expr: 'rate(business_searches_total[1m])'
+
+      # Authentication attempts rate
+      - record: 'job:auth_attempts:rate1m'
+        expr: 'rate(auth_attempts_total[1m])'
+
+      # Authentication success rate
+      - record: 'job:auth_success_rate:5m'
+        expr: 'rate(auth_success_total[5m]) / rate(auth_attempts_total[5m]) * 100'
+
+      # Transaction volume rate
+      - record: 'job:transactions:rate1m'
+        expr: 'rate(business_transactions_total[1m])'
+
+      # Transaction success rate
+      - record: 'job:transaction_success_rate:5m'
+        expr: 'rate(business_transactions_success_total[5m]) / rate(business_transactions_total[5m]) * 100'
+
+  - name: 'system_metrics'
+    interval: 30s
+    rules:
+      # CPU usage percentage
+      - record: 'job:node_cpu_usage_percent:5m'
+        expr: '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)'
+
+      # Memory usage percentage
+      - record: 'job:node_memory_usage_percent'
+        expr: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100'
+
+      # Disk usage percentage
+      - record: 'job:node_disk_usage_percent'
+        expr: '(node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes * 100'
+
+      # Network I/O rate
+      - record: 'job:node_network_receive_rate:5m'
+        expr: 'rate(node_network_receive_bytes_total[5m])'
+
+      - record: 'job:node_network_transmit_rate:5m'
+        expr: 'rate(node_network_transmit_bytes_total[5m])'
+
+  - name: 'availability_metrics'
+    interval: 30s
+    rules:
+      # Uptime in days
+      - record: 'job:uptime_days'
+        expr: 'node_boot_time_seconds / 86400'
+
+      # Service availability percentage (5m window)
+      - record: 'job:service_availability:5m'
+        expr: 'rate(http_requests_total{status!~"5.."}[5m]) / rate(http_requests_total[5m]) * 100'
+
+      # Service availability percentage (1h window)
+      - record: 'job:service_availability:1h'
+        expr: 'rate(http_requests_total{status!~"5.."}[1h]) / rate(http_requests_total[1h]) * 100'

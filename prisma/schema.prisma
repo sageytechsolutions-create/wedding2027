@@ -1,0 +1,246 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  fullName          String?
+  profilePictureUrl String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  portfolioProperties PortfolioProperty[]
+  transactions        Transaction[]
+  favorites           Favorite[]
+  emailSchedules      EmailSchedule[]
+  userMetrics         UserMetric[]
+  metricAlerts        MetricAlert[]
+  reports             ReportGeneration[]
+
+  @@map("users")
+}
+
+model Property {
+  id                String    @id @default(cuid())
+  externalId        String?   @unique
+  address           String
+  city              String
+  state             String
+  zipCode           String
+  lat               Float?
+  lng               Float?
+  propertyType      String    // "single_family", "condo", "apartment", etc.
+  bedrooms          Int?
+  bathrooms         Float?
+  squareFeet        Int?
+  lotSize           Float?
+  yearBuilt         Int?
+  listPrice         Float?
+  estimatedValue    Float?
+  propertyImageUrl  String?
+  propertyDetails   Json?     // Raw data from external sources
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  portfolioProperties PortfolioProperty[]
+  transactions        Transaction[]
+  favorites           Favorite[]
+
+  @@map("properties")
+}
+
+model PortfolioProperty {
+  id                           String    @id @default(cuid())
+  userId                       String
+  user                         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId                   String
+  property                     Property  @relation(fields: [propertyId], references: [id])
+  acquisitionDate              DateTime
+  acquisitionPrice             Float
+  downPayment                  Float?
+  loanAmount                   Float?
+  interestRate                 Float?
+  annualPropertyTax            Float?
+  annualInsurance              Float?
+  annualMaintenanceEstimate    Float?
+  notes                        String?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
+
+  transactions Transaction[]
+
+  @@unique([userId, propertyId])
+  @@map("portfolio_properties")
+}
+
+model Transaction {
+  id                    String    @id @default(cuid())
+  portfolioPropertyId   String
+  portfolioProperty     PortfolioProperty @relation(fields: [portfolioPropertyId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId            String
+  property              Property  @relation(fields: [propertyId], references: [id])
+  transactionType       String    // "income", "expense", "mortgage"
+  category              String    // "rent_income", "property_tax", "insurance", etc.
+  amount                Float
+  date                  DateTime
+  description           String?
+  createdAt             DateTime  @default(now())
+
+  @@map("transactions")
+}
+
+model Favorite {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId  String
+  property    Property  @relation(fields: [propertyId], references: [id])
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, propertyId])
+  @@map("favorites")
+}
+
+// Sprint 5: Email Scheduling
+model EmailSchedule {
+  id             String    @id @default(cuid())
+  portfolioId    String
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  frequency      String    // "weekly", "monthly", "quarterly", "once"
+  dayOfWeek      String?   // "monday", "tuesday", etc.
+  dayOfMonth     Int?      // 1-28
+  timeOfDay      String    // "09:00"
+  reportType     String    // "summary", "full", "executive"
+  recipients     String[]  // Email addresses
+  templateId     String?
+  lastRun        DateTime?
+  nextRun        DateTime
+  isActive       Boolean   @default(true)
+  retryCount     Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  deliveryLogs   EmailDeliveryLog[]
+
+  @@index([userId])
+  @@index([nextRun])
+  @@map("email_schedules")
+}
+
+model EmailDeliveryLog {
+  id              String    @id @default(cuid())
+  scheduleId      String?
+  schedule        EmailSchedule? @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  messageId       String?
+  recipientEmail  String
+  subject         String?
+  status          String    // "sent", "failed", "bounced", "opened"
+  errorMessage    String?
+  sentAt          DateTime?
+  openedAt        DateTime?
+  attemptCount    Int       @default(1)
+  createdAt       DateTime  @default(now())
+
+  @@index([scheduleId])
+  @@index([status])
+  @@map("email_delivery_logs")
+}
+
+model EmailTemplate {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  subject         String
+  templateType    String?   // "summary", "full", "executive", "alert"
+  htmlBody        String
+  textBody        String?
+  variables       String[]  // Template variable names
+  includesChart   Boolean   @default(false)
+  includesAttachment Boolean @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("email_templates")
+}
+
+// Sprint 5: Custom Metrics
+model UserMetric {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  portfolioId     String?
+  name            String
+  description     String?
+  formulaType     String    // "sum", "average", "ratio", "formula"
+  formulaConfig   Json      // Stores formula configuration
+  displayFormat   String    // "percentage", "currency", "number"
+  thresholdAlert  Float?
+  isFavorite      Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  calculations    MetricCalculation[]
+  alerts          MetricAlert[]
+
+  @@index([userId])
+  @@map("user_metrics")
+}
+
+model MetricCalculation {
+  id              String    @id @default(cuid())
+  metricId        String
+  metric          UserMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  calculatedValue Float
+  portfolioSnapshot Json?  // Snapshot of portfolio data at calculation time
+  calculationTime Int      // milliseconds
+  alertTriggered  Boolean  @default(false)
+  createdAt       DateTime  @default(now())
+
+  @@index([metricId])
+  @@map("metric_calculations")
+}
+
+model MetricAlert {
+  id              String    @id @default(cuid())
+  metricId        String
+  metric          UserMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thresholdValue  Float?
+  currentValue    Float?
+  breachDirection String?   // "above", "below"
+  isActive        Boolean   @default(true)
+  acknowledgedAt  DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId])
+  @@index([metricId])
+  @@map("metric_alerts")
+}
+
+// Sprint 5: Reports
+model ReportGeneration {
+  id              String    @id @default(cuid())
+  portfolioId     String
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reportType      String    // "summary", "full", "executive"
+  fileSize        Int
+  generatedAt     DateTime  @default(now())
+
+  @@index([userId])
+  @@index([portfolioId])
+  @@map("report_generation")
+}

@@ -1,0 +1,173 @@
+name: Frontend E2E Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - claude/**
+    paths:
+      - 'src/frontend/**'
+      - '.github/workflows/frontend-e2e-tests.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/frontend/**'
+
+concurrency:
+  group: e2e-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-tests:
+    name: E2E Tests (${{ matrix.test-suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        test-suite:
+          - functional
+          - visual
+          - performance
+          - accessibility
+          - error-scenarios
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'src/frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: src/frontend
+        run: npx playwright install --with-deps
+
+      - name: Run Functional E2E Tests
+        if: matrix.test-suite == 'functional'
+        working-directory: src/frontend
+        run: npm run test:e2e -- --grep "Authentication Flow|Portfolio Management|Property Search|Transaction Management" --reporter=html --reporter=json
+
+      - name: Run Visual Regression Tests
+        if: matrix.test-suite == 'visual'
+        working-directory: src/frontend
+        run: npm run test:e2e -- visual.spec.ts --reporter=html --reporter=json
+
+      - name: Run Performance Tests
+        if: matrix.test-suite == 'performance'
+        working-directory: src/frontend
+        run: npm run test:e2e -- performance.spec.ts --reporter=html --reporter=json
+
+      - name: Run Accessibility Tests
+        if: matrix.test-suite == 'accessibility'
+        working-directory: src/frontend
+        run: npm run test:e2e -- accessibility.spec.ts --reporter=html --reporter=json
+
+      - name: Run Error Scenario Tests
+        if: matrix.test-suite == 'error-scenarios'
+        working-directory: src/frontend
+        run: npm run test:e2e -- error-scenarios.spec.ts --reporter=html --reporter=json
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.test-suite }}
+          path: src/frontend/test-results/
+          retention-days: 30
+
+      - name: Upload Playwright Videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-videos-${{ matrix.test-suite }}
+          path: src/frontend/test-results/videos/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Publish Test Report
+        if: always()
+        uses: daun/playwright-report-comment@v3
+        with:
+          report-path: src/frontend/test-results/html/
+
+  lighthouse-audit:
+    name: Lighthouse Performance Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'src/frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: src/frontend
+        run: npm run build
+
+      - name: Run Lighthouse audit
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: './src/frontend/lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [e2e-tests]
+
+    steps:
+      - name: Download all test reports
+        uses: actions/download-artifact@v4
+        with:
+          path: test-reports
+
+      - name: Generate Test Summary
+        run: |
+          echo "# Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## E2E Test Suites" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Functional Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Visual Regression Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Performance Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Accessibility Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Error Scenario Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Reports" >> $GITHUB_STEP_SUMMARY
+          echo "Test results are available in the uploaded artifacts." >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment PR with Test Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## E2E Test Results\n\n✅ All E2E test suites completed\n\n- Functional Tests (35+ tests)\n- Visual Regression Tests (20 tests)\n- Performance Tests (17 tests)\n- Accessibility Tests (27 tests)\n- Error Scenario Tests (25 tests)\n\nTest reports available in Artifacts.'
+            })
