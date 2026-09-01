@@ -41,25 +41,25 @@ export class MetricsCalculationService {
     let value = 0;
 
     try {
-      switch (userMetric.formula_type) {
+      switch (userMetric.formulaType) {
         case 'sum': {
-          value = this.calculateSum(userMetric.formula_config.field, portfolioData);
+          value = this.calculateSum(userMetric.formulaConfig.field, portfolioData);
           break;
         }
         case 'average': {
-          value = this.calculateAverage(userMetric.formula_config.field, portfolioData);
+          value = this.calculateAverage(userMetric.formulaConfig.field, portfolioData);
           break;
         }
         case 'ratio': {
           value = this.calculateRatio(
-            userMetric.formula_config.numerator_field,
-            userMetric.formula_config.denominator_field,
+            userMetric.formulaConfig.numeratorField,
+            userMetric.formulaConfig.denominatorField,
             portfolioData
           );
           break;
         }
         case 'formula': {
-          value = this.evaluateFormula(userMetric.formula_config.formula, portfolioData);
+          value = this.evaluateFormula(userMetric.formulaConfig.formula, portfolioData);
           break;
         }
       }
@@ -69,16 +69,16 @@ export class MetricsCalculationService {
     }
 
     const thresholdBreached =
-      userMetric.threshold_alert !== null &&
-      userMetric.threshold_alert !== undefined &&
-      value < userMetric.threshold_alert;
+      userMetric.thresholdAlert !== null &&
+      userMetric.thresholdAlert !== undefined &&
+      value < userMetric.thresholdAlert;
 
     return {
       metricId,
       metricName: userMetric.name,
       value,
-      displayFormat: userMetric.display_format,
-      thresholdAlert: userMetric.threshold_alert,
+      displayFormat: userMetric.displayFormat,
+      thresholdAlert: userMetric.thresholdAlert,
       thresholdBreached,
       calculatedAt: new Date(),
     };
@@ -86,7 +86,7 @@ export class MetricsCalculationService {
 
   async calculateAllMetrics(portfolioId: string, portfolioData: PortfolioData): Promise<MetricResult[]> {
     const userMetrics = await prisma.userMetric.findMany({
-      where: { portfolio_id: portfolioId },
+      where: { portfolioId: portfolioId },
     });
 
     const results: MetricResult[] = [];
@@ -99,11 +99,11 @@ export class MetricsCalculationService {
       await prisma.metricCalculation.create({
         data: {
           id: randomUUID(),
-          metric_id: metric.id,
-          calculated_value: result.value,
-          portfolio_snapshot: portfolioData,
-          calculation_time: 100,
-          alert_triggered: result.thresholdBreached,
+          metricId: metric.id,
+          calculatedValue: result.value,
+          portfolioSnapshot: portfolioData,
+          calculationTime: 100,
+          alertTriggered: result.thresholdBreached,
         },
       });
 
@@ -179,8 +179,8 @@ export class MetricsCalculationService {
     try {
       const existingAlert = await prisma.metricAlert.findFirst({
         where: {
-          metric_id: metric.id,
-          is_active: true,
+          metricId: metric.id,
+          isActive: true,
         },
       });
 
@@ -188,12 +188,12 @@ export class MetricsCalculationService {
         await prisma.metricAlert.create({
           data: {
             id: randomUUID(),
-            metric_id: metric.id,
-            user_id: metric.user_id,
-            threshold_value: metric.threshold_alert,
-            current_value: result.value,
-            breach_direction: result.value < metric.threshold_alert ? 'below' : 'above',
-            is_active: true,
+            metricId: metric.id,
+            userId: metric.userId,
+            thresholdValue: metric.thresholdAlert,
+            currentValue: result.value,
+            breachDirection: result.value < metric.thresholdAlert ? 'below' : 'above',
+            isActive: true,
           },
         });
       }
@@ -217,15 +217,15 @@ export class MetricsCalculationService {
 
   async getMetricHistory(metricId: string, limit: number = 30): Promise<any[]> {
     const calculations = await prisma.metricCalculation.findMany({
-      where: { metric_id: metricId },
-      orderBy: { created_at: 'desc' },
+      where: { metricId: metricId },
+      orderBy: { createdAt: 'desc' },
       take: limit,
     });
 
     return calculations.map((calc) => ({
-      value: calc.calculated_value,
-      calculatedAt: calc.created_at,
-      alertTriggered: calc.alert_triggered,
+      value: calc.calculatedValue,
+      calculatedAt: calc.createdAt,
+      alertTriggered: calc.alertTriggered,
     }));
   }
 }

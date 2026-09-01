@@ -4,10 +4,7 @@ import { emailDeliveryService } from './emailDeliveryService';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-};
+const redisUrl = `redis://${process.env.REDIS_HOST || 'localhost'}:${parseInt(process.env.REDIS_PORT || '6379')}`;
 
 export interface EmailQueueJob {
   scheduleId: string;
@@ -31,7 +28,7 @@ export class EmailQueueService {
   private processingInterval: NodeJS.Timeout | null = null;
 
   constructor() {
-    this.emailQueue = new Queue('email-delivery', redisConfig);
+    this.emailQueue = new Queue('email-delivery', redisUrl);
     this.setupQueueHandlers();
   }
 
@@ -56,10 +53,10 @@ export class EmailQueueService {
     const job = await this.emailQueue.add(
       {
         scheduleId: schedule.id,
-        portfolioId: schedule.portfolio_id,
-        userId: schedule.user_id,
+        portfolioId: schedule.portfolioId,
+        userId: schedule.userId,
         recipients: schedule.recipients,
-        reportType: schedule.report_type,
+        reportType: schedule.reportType,
         portfolioName: 'Portfolio', // TODO: fetch actual portfolio name
       },
       {
@@ -173,7 +170,7 @@ export class EmailQueueService {
     try {
       const result = await prisma.emailDeliveryLog.deleteMany({
         where: {
-          created_at: {
+          createdAt: {
             lt: cutoffDate,
           },
         },

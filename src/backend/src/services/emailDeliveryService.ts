@@ -145,11 +145,11 @@ export class EmailDeliveryService {
       results.push(result);
 
       await this.logEmailDelivery({
-        schedule_id: scheduleId,
-        recipient_email: recipient,
-        report_type: reportType,
+        scheduleId: scheduleId,
+        recipientEmail: recipient,
+        reportType: reportType,
         status: result.status,
-        message_id: result.messageId,
+        messageId: result.messageId,
       });
     }
 
@@ -192,12 +192,12 @@ export class EmailDeliveryService {
         await prisma.emailDeliveryLog.create({
           data: {
             id: randomUUID(),
-            message_id: data.messageId,
-            recipient_email: recipient,
+            messageId: data.messageId,
+            recipientEmail: recipient,
             subject: data.subject,
             status: data.status,
-            error_message: data.error,
-            sent_at: new Date(),
+            errorMessage: data.error,
+            sentAt: new Date(),
           },
         });
       }
@@ -207,22 +207,22 @@ export class EmailDeliveryService {
   }
 
   private async logEmailDelivery(data: {
-    schedule_id: string;
-    recipient_email: string;
-    report_type: string;
+    scheduleId: string;
+    recipientEmail: string;
+    reportType: string;
     status: string;
-    message_id: string;
+    messageId: string;
   }): Promise<void> {
     try {
       await prisma.emailDeliveryLog.create({
         data: {
           id: randomUUID(),
-          schedule_id: data.schedule_id,
-          recipient_email: data.recipient_email,
-          report_type: data.report_type,
+          scheduleId: data.scheduleId,
+          recipientEmail: data.recipientEmail,
+          subject: data.reportType,
           status: data.status,
-          message_id: data.message_id,
-          sent_at: new Date(),
+          messageId: data.messageId,
+          sentAt: new Date(),
         },
       });
     } catch (error) {

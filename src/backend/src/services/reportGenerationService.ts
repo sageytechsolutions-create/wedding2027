@@ -320,11 +320,11 @@ export class ReportGenerationService {
       await prisma.reportGeneration.create({
         data: {
           id: reportId,
-          portfolio_id: portfolioId,
-          user_id: userId,
-          report_type: reportType,
-          file_size: fileSize,
-          generated_at: new Date(),
+          portfolioId: portfolioId,
+          userId: userId,
+          reportType: reportType,
+          fileSize: fileSize,
+          generatedAt: new Date(),
         },
       });
 
@@ -345,18 +345,18 @@ export class ReportGenerationService {
   async getReportHistory(portfolioId: string, limit: number = 10): Promise<ReportMetadata[]> {
     try {
       const reports = await prisma.reportGeneration.findMany({
-        where: { portfolio_id: portfolioId },
-        orderBy: { generated_at: 'desc' },
+        where: { portfolioId: portfolioId },
+        orderBy: { generatedAt: 'desc' },
         take: limit,
       });
 
       return reports.map((r) => ({
         reportId: r.id,
-        portfolioId: r.portfolio_id,
-        reportType: r.report_type,
-        generatedAt: r.generated_at,
-        pageCount: Math.ceil(r.file_size / 1000),
-        fileSize: r.file_size,
+        portfolioId: r.portfolioId,
+        reportType: r.reportType,
+        generatedAt: r.generatedAt,
+        pageCount: Math.ceil(r.fileSize / 1000),
+        fileSize: r.fileSize,
       }));
     } catch (error) {
       console.error('Error getting report history:', error);
@@ -371,8 +371,8 @@ export class ReportGenerationService {
     try {
       const result = await prisma.reportGeneration.deleteMany({
         where: {
-          portfolio_id: portfolioId,
-          generated_at: {
+          portfolioId: portfolioId,
+          generatedAt: {
             lt: cutoffDate,
           },
         },

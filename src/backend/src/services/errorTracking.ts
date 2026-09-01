@@ -106,7 +106,6 @@ export function setRequestContext(context: RequestContext): void {
  */
 export function clearRequestContext(): void {
   Sentry.setUser(null);
-  Sentry.clearBreadcrumbs();
 }
 
 /**

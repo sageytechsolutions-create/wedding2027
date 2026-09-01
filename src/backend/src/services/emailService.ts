@@ -5,36 +5,36 @@ import { z } from 'zod';
 const prisma = new PrismaClient();
 
 export const EmailScheduleConfigSchema = z.object({
-  portfolio_id: z.string().uuid(),
+  portfolioId: z.string().uuid(),
   frequency: z.enum(['weekly', 'monthly', 'quarterly', 'once']),
-  day_of_week: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']).optional(),
-  day_of_month: z.number().min(1).max(28).optional(),
-  time: z.string().regex(/^\d{2}:\d{2}$/),
-  report_type: z.enum(['summary', 'full', 'executive']),
+  dayOfWeek: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']).optional(),
+  dayOfMonth: z.number().min(1).max(28).optional(),
+  timeOfDay: z.string().regex(/^\d{2}:\d{2}$/),
+  reportType: z.enum(['summary', 'full', 'executive']),
   recipients: z.array(z.string().email()),
-  template_id: z.string().uuid().optional(),
+  templateId: z.string().uuid().optional(),
 });
 
 export interface EmailScheduleConfig extends z.infer<typeof EmailScheduleConfigSchema> {
-  user_id?: string;
+  userId?: string;
 }
 
 export interface EmailSchedule {
   id: string;
-  portfolio_id: string;
-  user_id: string;
+  portfolioId: string;
+  userId: string;
   frequency: string;
-  day_of_week?: string;
-  day_of_month?: number;
-  time_of_day: string;
-  report_type: string;
+  dayOfWeek?: string;
+  dayOfMonth?: number;
+  timeOfDay: string;
+  reportType: string;
   recipients: string[];
-  template_id?: string;
-  last_run?: Date;
-  next_run: Date;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
+  templateId?: string;
+  lastRun?: Date;
+  nextRun: Date;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export class EmailService {
@@ -47,25 +47,25 @@ export class EmailService {
 
     const nextRun = this.calculateNextRun(
       config.frequency,
-      config.day_of_week,
-      config.day_of_month,
-      config.time
+      config.dayOfWeek,
+      config.dayOfMonth,
+      config.timeOfDay
     );
 
     const schedule = await prisma.emailSchedule.create({
       data: {
         id: randomUUID(),
-        portfolio_id: config.portfolio_id,
-        user_id: userId,
+        portfolioId: config.portfolioId,
+        userId: userId,
         frequency: config.frequency,
-        day_of_week: config.day_of_week,
-        day_of_month: config.day_of_month,
-        time_of_day: config.time,
-        report_type: config.report_type,
+        dayOfWeek: config.dayOfWeek,
+        dayOfMonth: config.dayOfMonth,
+        timeOfDay: config.timeOfDay,
+        reportType: config.reportType,
         recipients: config.recipients,
-        template_id: config.template_id,
-        next_run: nextRun,
-        is_active: true,
+        templateId: config.templateId,
+        nextRun: nextRun,
+        isActive: true,
       },
     });
 
@@ -75,10 +75,10 @@ export class EmailService {
   async getSchedules(userId: string, portfolioId?: string): Promise<EmailSchedule[]> {
     const schedules = await prisma.emailSchedule.findMany({
       where: {
-        user_id: userId,
-        ...(portfolioId && { portfolio_id: portfolioId }),
+        userId: userId,
+        ...(portfolioId && { portfolioId: portfolioId }),
       },
-      orderBy: { next_run: 'asc' },
+      orderBy: { nextRun: 'asc' },
     });
 
     return schedules.map((s) => this.mapToEmailSchedule(s));
@@ -101,22 +101,22 @@ export class EmailService {
     const merged = { ...existing, ...updates };
     const nextRun = this.calculateNextRun(
       merged.frequency as string,
-      merged.day_of_week,
-      merged.day_of_month,
-      merged.time_of_day
+      merged.dayOfWeek,
+      merged.dayOfMonth,
+      merged.timeOfDay
     );
 
     const schedule = await prisma.emailSchedule.update({
       where: { id: scheduleId },
       data: {
         ...(updates.frequency && { frequency: updates.frequency }),
-        ...(updates.day_of_week !== undefined && { day_of_week: updates.day_of_week }),
-        ...(updates.day_of_month !== undefined && { day_of_month: updates.day_of_month }),
-        ...(updates.time && { time_of_day: updates.time }),
-        ...(updates.report_type && { report_type: updates.report_type }),
+        ...(updates.dayOfWeek !== undefined && { dayOfWeek: updates.dayOfWeek }),
+        ...(updates.dayOfMonth !== undefined && { dayOfMonth: updates.dayOfMonth }),
+        ...(updates.timeOfDay && { timeOfDay: updates.timeOfDay }),
+        ...(updates.reportType && { reportType: updates.reportType }),
         ...(updates.recipients && { recipients: updates.recipients }),
-        next_run: nextRun,
-        updated_at: new Date(),
+        nextRun: nextRun,
+        updatedAt: new Date(),
       },
     });
 
@@ -132,7 +132,7 @@ export class EmailService {
   async deactivateSchedule(scheduleId: string): Promise<void> {
     await prisma.emailSchedule.update({
       where: { id: scheduleId },
-      data: { is_active: false },
+      data: { isActive: false },
     });
   }
 
@@ -141,8 +141,8 @@ export class EmailService {
 
     const schedules = await prisma.emailSchedule.findMany({
       where: {
-        is_active: true,
-        next_run: {
+        isActive: true,
+        nextRun: {
           lte: now,
         },
       },
@@ -157,22 +157,22 @@ export class EmailService {
       throw new Error('Schedule not found');
     }
 
-    let nextRun = schedule.next_run;
+    let nextRun = schedule.nextRun;
     if (success) {
       nextRun = this.calculateNextRun(
         schedule.frequency,
-        schedule.day_of_week,
-        schedule.day_of_month,
-        schedule.time_of_day
+        schedule.dayOfWeek,
+        schedule.dayOfMonth,
+        schedule.timeOfDay
       );
     }
 
     await prisma.emailSchedule.update({
       where: { id: scheduleId },
       data: {
-        last_run: new Date(),
-        next_run: nextRun,
-        updated_at: new Date(),
+        lastRun: new Date(),
+        nextRun: nextRun,
+        updatedAt: new Date(),
       },
     });
   }
@@ -243,20 +243,20 @@ export class EmailService {
   private mapToEmailSchedule(record: any): EmailSchedule {
     return {
       id: record.id,
-      portfolio_id: record.portfolio_id,
-      user_id: record.user_id,
+      portfolioId: record.portfolioId,
+      userId: record.userId,
       frequency: record.frequency,
-      day_of_week: record.day_of_week,
-      day_of_month: record.day_of_month,
-      time_of_day: record.time_of_day,
-      report_type: record.report_type,
+      dayOfWeek: record.dayOfWeek,
+      dayOfMonth: record.dayOfMonth,
+      timeOfDay: record.timeOfDay,
+      reportType: record.reportType,
       recipients: record.recipients,
-      template_id: record.template_id,
-      last_run: record.last_run,
-      next_run: record.next_run,
-      is_active: record.is_active,
-      created_at: record.created_at,
-      updated_at: record.updated_at,
+      templateId: record.templateId,
+      lastRun: record.lastRun,
+      nextRun: record.nextRun,
+      isActive: record.isActive,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
     };
   }
 }

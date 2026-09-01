@@ -181,10 +181,10 @@ export class MetricsController {
       const alert = await prisma.metricAlert.create({
         data: {
           id: randomUUID(),
-          metric_id,
-          user_id: req.user.id,
-          threshold_value,
-          is_active: true,
+          metricId: metric_id,
+          userId: req.user.id,
+          thresholdValue: threshold_value,
+          isActive: true,
         },
       });
 
@@ -192,9 +192,9 @@ export class MetricsController {
         success: true,
         alert: {
           id: alert.id,
-          metric_id: alert.metric_id,
-          threshold_value: alert.threshold_value,
-          is_active: alert.is_active,
+          metricId: alert.metricId,
+          thresholdValue: alert.thresholdValue,
+          isActive: alert.isActive,
         },
       });
     } catch (error) {
@@ -212,17 +212,17 @@ export class MetricsController {
 
       const { metric_id, active_only = true } = req.query;
 
-      const where: any = { user_id: req.user.id };
+      const where: any = { userId: req.user.id };
       if (active_only === 'true') {
-        where.is_active = true;
+        where.isActive = true;
       }
       if (metric_id) {
-        where.metric_id = metric_id;
+        where.metricId = metric_id;
       }
 
       const alerts = await prisma.metricAlert.findMany({
         where,
-        orderBy: { created_at: 'desc' },
+        orderBy: { createdAt: 'desc' },
       });
 
       res.json({
@@ -248,21 +248,21 @@ export class MetricsController {
         where: { id: alertId },
       });
 
-      if (!alert || alert.user_id !== req.user.id) {
+      if (!alert || alert.userId !== req.user.id) {
         res.status(404).json({ error: 'Alert not found' });
         return;
       }
 
       const updated = await prisma.metricAlert.update({
         where: { id: alertId },
-        data: { acknowledged_at: new Date() },
+        data: { acknowledgedAt: new Date() },
       });
 
       res.json({
         success: true,
         alert: {
           id: updated.id,
-          acknowledged_at: updated.acknowledged_at,
+          acknowledgedAt: updated.acknowledgedAt,
         },
       });
     } catch (error) {
@@ -284,7 +284,7 @@ export class MetricsController {
         where: { id: metricId },
       });
 
-      if (!metric || metric.user_id !== req.user.id) {
+      if (!metric || metric.userId !== req.user.id) {
         res.status(404).json({ error: 'Metric not found' });
         return;
       }
@@ -294,10 +294,10 @@ export class MetricsController {
         data: {
           ...(name && { name }),
           ...(description && { description }),
-          ...(formula_config && { formula_config }),
-          ...(display_format && { display_format }),
-          ...(threshold_alert !== undefined && { threshold_alert }),
-          ...(is_favorite !== undefined && { is_favorite }),
+          ...(formula_config && { formulaConfig: formula_config }),
+          ...(display_format && { displayFormat: display_format }),
+          ...(threshold_alert !== undefined && { thresholdAlert: threshold_alert }),
+          ...(is_favorite !== undefined && { isFavorite: is_favorite }),
         },
       });
 
@@ -324,7 +324,7 @@ export class MetricsController {
         where: { id: metricId },
       });
 
-      if (!metric || metric.user_id !== req.user.id) {
+      if (!metric || metric.userId !== req.user.id) {
         res.status(404).json({ error: 'Metric not found' });
         return;
       }

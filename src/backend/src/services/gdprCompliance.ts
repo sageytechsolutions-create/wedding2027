@@ -327,9 +327,9 @@ export function withdrawConsent(
 export function generatePrivacyReport(auditLogs: any[]): {
   reportDate: string;
   totalEvents: number;
-  datalAccessEvents: number;
+  dataAccessEvents: number;
   consentEvents: number;
-  dataDeleteionEvents: number;
+  dataDeletionEvents: number;
   dataExportEvents: number;
   gdprCompliance: number; // Percentage
 } {
@@ -340,7 +340,7 @@ export function generatePrivacyReport(auditLogs: any[]): {
     (log) => new Date(log.timestamp) >= thirtyDaysAgo
   );
 
-  const dataAccessEvents = recentLogs.filter(
+  const dataAccessEventsCount = recentLogs.filter(
     (log) => log.eventType === 'DATA_ACCESS'
   ).length;
 
@@ -350,7 +350,7 @@ export function generatePrivacyReport(auditLogs: any[]): {
       log.eventType === 'COMPLIANCE_CONSENT_WITHDRAWN'
   ).length;
 
-  const dataDeleteionEvents = recentLogs.filter(
+  const dataDeletionEvents = recentLogs.filter(
     (log) => log.eventType === 'DATA_DELETE'
   ).length;
 
@@ -361,9 +361,9 @@ export function generatePrivacyReport(auditLogs: any[]): {
   // Calculate GDPR compliance score (simplified)
   const complianceIndicators = {
     hasConsent: consentEvents > 0 ? 20 : 0,
-    hasDataAccess: dataAccessEvents > 0 ? 20 : 0,
+    hasDataAccess: dataAccessEventsCount > 0 ? 20 : 0,
     hasDataExport: dataExportEvents > 0 ? 20 : 0,
-    hasDeleteion: dataDeleteionEvents > 0 ? 20 : 0,
+    hasDeletion: dataDeletionEvents > 0 ? 20 : 0,
     auditTrail: recentLogs.length > 100 ? 20 : recentLogs.length > 0 ? 10 : 0,
   };
 
@@ -375,9 +375,9 @@ export function generatePrivacyReport(auditLogs: any[]): {
   return {
     reportDate: today.toISOString(),
     totalEvents: recentLogs.length,
-    datalAccessEvents,
+    dataAccessEvents: dataAccessEventsCount,
     consentEvents,
-    dataDeleteionEvents,
+    dataDeletionEvents,
     dataExportEvents,
     gdprCompliance: Math.min(100, complianceScore),
   };

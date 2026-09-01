@@ -16,8 +16,7 @@ export class ReportCacheService {
 
   constructor() {
     this.client = createClient({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
+      url: `redis://${process.env.REDIS_HOST || 'localhost'}:${parseInt(process.env.REDIS_PORT || '6379')}`,
     });
 
     this.client.on('error', (err) => console.error('Redis Client Error', err));

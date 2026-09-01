@@ -58,7 +58,7 @@ export class EmailController {
       const { id } = req.params;
       const schedule = await emailService.getScheduleById(id);
 
-      if (!schedule || schedule.user_id !== req.user.id) {
+      if (!schedule || schedule.userId !== req.user.id) {
         res.status(404).json({ error: 'Schedule not found' });
         return;
       }
@@ -79,7 +79,7 @@ export class EmailController {
       const { id } = req.params;
       const existing = await emailService.getScheduleById(id);
 
-      if (!existing || existing.user_id !== req.user.id) {
+      if (!existing || existing.userId !== req.user.id) {
         res.status(404).json({ error: 'Schedule not found' });
         return;
       }
@@ -104,7 +104,7 @@ export class EmailController {
       const { id } = req.params;
       const existing = await emailService.getScheduleById(id);
 
-      if (!existing || existing.user_id !== req.user.id) {
+      if (!existing || existing.userId !== req.user.id) {
         res.status(404).json({ error: 'Schedule not found' });
         return;
       }
@@ -164,16 +164,16 @@ export class EmailController {
       since.setDate(since.getDate() - daysNum);
 
       const where: any = {
-        created_at: { gte: since },
+        createdAt: { gte: since },
       };
 
       if (schedule_id) {
-        where.schedule_id = schedule_id;
+        where.scheduleId = schedule_id;
       }
 
       const logs = await prisma.emailDeliveryLog.findMany({
         where,
-        orderBy: { created_at: 'desc' },
+        orderBy: { createdAt: 'desc' },
         take: limitNum,
       });
 
