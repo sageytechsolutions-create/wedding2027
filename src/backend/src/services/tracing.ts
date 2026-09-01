@@ -298,9 +298,13 @@ export function tracingMiddleware(req: any, res: any, next: any) {
  * Propagate trace context to headers
  */
 export function injectTraceContext(headers: Record<string, string>): void {
-  const traceId = Sentry.getCurrentHub().getClient()?.getTraceId?.();
-  if (traceId) {
-    headers['sentry-trace'] = traceId;
+  try {
+    const span = Sentry.getActiveSpan?.();
+    if (span && 'toTraceparent' in span) {
+      headers['sentry-trace'] = (span as any).toTraceparent();
+    }
+  } catch (error) {
+    // Trace context injection failed, continue without it
   }
 }
 

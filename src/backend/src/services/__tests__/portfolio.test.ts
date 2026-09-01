@@ -189,18 +189,19 @@ describe('PortfolioService', () => {
 
       expect(result.totalInvestedCapital).toBe(450000);
       expect(result.totalCurrentValue).toBe(520000);
-      expect(result.totalGain).toBe(70000);
-      expect(result.totalROI).toBeGreaterThan(0);
+      expect(result.totalAppreciation).toBe(70000);
+      expect(result.roi).toBeGreaterThan(0);
     });
   });
 
   describe('getPropertyDetails', () => {
     it('should get property details for authenticated user', async () => {
+      const { id, ...propertyWithoutId } = mockProperty;
       mockPrisma.portfolioProperty.findFirst.mockResolvedValue({
         id: 'portfolio_prop_1',
         propertyId: 'property_1',
         userId: 'user_1',
-        ...mockProperty,
+        ...propertyWithoutId,
       });
 
       const result = await PortfolioService.getPropertyDetails('user_1', 'property_1');

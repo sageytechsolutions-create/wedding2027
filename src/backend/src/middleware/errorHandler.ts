@@ -3,14 +3,17 @@ import { AppError } from '../utils/errors.js';
 
 export const errorHandler = (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      error: {
-        code: err.code,
-        message: err.message,
-        statusCode: err.statusCode,
-        ...(process.env.NODE_ENV === 'development' && err.details && { details: err.details }),
-      },
-    });
+    const errorBody: any = {
+      code: err.code,
+      message: err.message,
+      statusCode: err.statusCode,
+    };
+
+    if (process.env.NODE_ENV === 'development' && err.details) {
+      errorBody.details = err.details;
+    }
+
+    res.status(err.statusCode).json({ error: errorBody });
     return;
   }
 

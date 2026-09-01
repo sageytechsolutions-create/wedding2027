@@ -101,7 +101,7 @@ export class MetricsCalculationService {
           id: randomUUID(),
           metricId: metric.id,
           calculatedValue: result.value,
-          portfolioSnapshot: portfolioData,
+          portfolioSnapshot: portfolioData as any,
           calculationTime: 100,
           alertTriggered: result.thresholdBreached,
         },

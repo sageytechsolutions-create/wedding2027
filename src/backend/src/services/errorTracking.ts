@@ -409,7 +409,7 @@ export function sentryRequestHandler() {
 /**
  * Middleware for Express to capture errors
  */
-export function sentryErrorHandler() {
+export function sentryErrorHandler(): any {
   return Sentry.Handlers.errorHandler();
 }
 

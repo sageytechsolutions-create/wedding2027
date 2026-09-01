@@ -214,12 +214,13 @@ export function validateInput(req: Request, res: Response, next: NextFunction): 
       { path: req.path, method: req.method }
     );
 
-    return res.status(400).json({
+    res.status(400).json({
       error: {
         message: 'Invalid input detected',
         details: validationErrors,
       },
     });
+    return;
   }
 
   // Sanitize inputs for safe processing
@@ -246,9 +247,10 @@ export function validateEmailEndpoint(
 
   if (!email || !validateEmail(email)) {
     addBreadcrumb('email', 'Invalid email format', email);
-    return res.status(400).json({
+    res.status(400).json({
       error: { message: 'Invalid email format' },
     });
+    return;
   }
 
   next();
@@ -338,12 +340,13 @@ export function validatePasswordEndpoint(
 
   if (!validation.valid) {
     addBreadcrumb('password', 'Weak password', undefined);
-    return res.status(400).json({
+    res.status(400).json({
       error: {
         message: 'Password does not meet security requirements',
         feedback: validation.feedback,
       },
     });
+    return;
   }
 
   next();

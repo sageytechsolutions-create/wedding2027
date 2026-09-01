@@ -9,6 +9,15 @@ import { Request, Response, NextFunction } from 'express';
 import * as Sentry from '@sentry/node';
 import { captureException, addBreadcrumb, trackQueryPerformance, setRequestContext, clearRequestContext } from '../services/errorTracking';
 
+declare global {
+  namespace Express {
+    interface Request {
+      id?: string;
+      startTime?: number;
+    }
+  }
+}
+
 /**
  * Middleware to initialize request tracking
  * Adds unique request ID and timing information
@@ -353,7 +362,7 @@ export function trackCacheOperation(
   key: string,
   duration?: number
 ): void {
-  const level = operation === 'miss' ? 'info' : 'debug';
+  const level = operation === 'miss' ? 'info' : 'info';
 
   addBreadcrumb(
     `Cache ${operation}: ${key}`,

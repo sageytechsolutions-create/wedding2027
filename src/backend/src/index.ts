@@ -29,9 +29,10 @@ setupSentryMiddleware(app);
 app.use(express.json());
 
 // Security: CORS with hardening
+const corsOrigin = process.env.NODE_ENV === 'production' ? (env.supabaseUrl ? [env.supabaseUrl] : '*') : '*';
 app.use(
   cors({
-    origin: process.env.NODE_ENV === 'production' ? [env.supabaseUrl] : '*',
+    origin: corsOrigin as any,
     credentials: true,
     maxAge: 86400,
   })

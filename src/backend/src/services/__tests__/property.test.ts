@@ -39,10 +39,10 @@ describe('PropertyService', () => {
 
       const result = await PropertyService.search(params);
 
-      expect(Array.isArray(result.results)).toBe(true);
-      expect(result).toHaveProperty('total');
-      expect(result).toHaveProperty('page');
-      expect(result).toHaveProperty('limit');
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(result.pagination).toHaveProperty('total');
+      expect(result.pagination).toHaveProperty('page');
+      expect(result.pagination).toHaveProperty('limit');
     });
 
     it('should apply pagination', async () => {

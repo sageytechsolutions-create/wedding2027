@@ -173,8 +173,8 @@ export class PropertySyncService {
         const marketStats = await this.zillow.getMarketStats(city, state);
         if (marketStats) {
           const estimatedValue =
-            prop.squareFeet * marketStats.pricePerSqft +
-            (prop.bedrooms * 50000 + prop.bathrooms * 30000);
+            (prop.squareFeet || 0) * marketStats.pricePerSqft +
+            ((prop.bedrooms || 0) * 50000 + (prop.bathrooms || 0) * 30000);
 
           await this.prisma.property.update({
             where: { id: prop.id },

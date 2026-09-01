@@ -117,10 +117,10 @@ describe('Backend Integration Tests', () => {
 
       const summary = await PortfolioService.getPortfolioSummary(userId);
 
-      expect(summary.totalProperties).toBe(2);
+      expect(summary.propertyCount).toBe(2);
       expect(summary.totalInvestedCapital).toBe(800000);
       expect(summary.totalCurrentValue).toBe(920000);
-      expect(summary.totalGain).toBe(120000);
+      expect(summary.totalAppreciation).toBe(120000);
     });
   });
 
@@ -235,7 +235,7 @@ describe('Backend Integration Tests', () => {
         limit: 20,
       });
 
-      expect(results.results.length).toBeGreaterThan(0);
+      expect(results.data.length).toBeGreaterThan(0);
 
       // Add to favorites
       mockPrisma.favorite.create.mockResolvedValue({
@@ -259,8 +259,8 @@ describe('Backend Integration Tests', () => {
 
       const favorites = await PropertyService.getFavorites(userId, 1, 20);
 
-      expect(favorites.results).toHaveLength(1);
-      expect(favorites.results[0]).toHaveProperty('notes', 'Great neighborhood');
+      expect(favorites.data).toHaveLength(1);
+      expect(favorites.data[0]).toHaveProperty('notes', 'Great neighborhood');
     });
 
     it('should remove property from favorites', async () => {

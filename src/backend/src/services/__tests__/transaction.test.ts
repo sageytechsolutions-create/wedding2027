@@ -27,7 +27,7 @@ describe('TransactionService', () => {
     it('should create income transaction', async () => {
       const input = {
         portfolioPropertyId: 'portfolio_prop_1',
-        transactionType: 'income',
+        transactionType: 'income' as const,
         category: 'rent',
         amount: 2500,
         date: new Date(),
@@ -50,7 +50,7 @@ describe('TransactionService', () => {
     it('should create expense transaction', async () => {
       const input = {
         portfolioPropertyId: 'portfolio_prop_1',
-        transactionType: 'expense',
+        transactionType: 'expense' as const,
         category: 'maintenance',
         amount: 500,
         date: new Date(),
@@ -71,7 +71,7 @@ describe('TransactionService', () => {
     it('should create mortgage transaction', async () => {
       const input = {
         portfolioPropertyId: 'portfolio_prop_1',
-        transactionType: 'mortgage',
+        transactionType: 'mortgage' as const,
         category: 'principal',
         amount: 1500,
         date: new Date(),
@@ -91,7 +91,7 @@ describe('TransactionService', () => {
     it('should include optional description', async () => {
       const input = {
         portfolioPropertyId: 'portfolio_prop_1',
-        transactionType: 'expense',
+        transactionType: 'expense' as const,
         category: 'maintenance',
         amount: 300,
         date: new Date(),
