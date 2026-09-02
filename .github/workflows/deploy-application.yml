@@ -54,10 +54,10 @@ jobs:
         run: npm ci --workspaces
 
       - name: Run type check
-        run: npm run build --workspace=ai-realestate-backend
+        run: npm run build --workspace=src/backend
 
       - name: Build frontend
-        run: npm run build --workspace=ai-realestate-frontend
+        run: npm run build --workspace=src/frontend
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
