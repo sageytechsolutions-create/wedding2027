@@ -40,7 +40,7 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/src/backend/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/src/backend/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 
 # Copy package.json for version info
 COPY --chown=nodejs:nodejs src/backend/package.json .
