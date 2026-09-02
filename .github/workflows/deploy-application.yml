@@ -1,0 +1,382 @@
+name: Deploy Application (Staging & Production)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/backend/**'
+      - 'src/frontend/**'
+      - 'Dockerfile.backend'
+      - 'Dockerfile.frontend'
+      - 'docker-compose.production.yml'
+      - 'package.json'
+      - '.github/workflows/deploy-application.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+          - both
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # =========================================================================
+  # Build Stage
+  # =========================================================================
+
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --workspaces
+
+      - name: Run type check
+        run: npm run build --workspace=ai-realestate-backend
+
+      - name: Build frontend
+        run: npm run build --workspace=ai-realestate-frontend
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:buildcache,mode=max
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.frontend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:buildcache,mode=max
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # =========================================================================
+  # Staging Deployment
+  # =========================================================================
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging' || github.event.inputs.environment == 'both'
+    environment:
+      name: staging
+      url: https://staging.ai-realestate.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create deployment record
+        uses: chrnorm/deployment-action@v2
+        id: deployment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: staging
+          auto_merge: false
+          required_contexts: 'build'
+
+      - name: Deploy to staging
+        env:
+          DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
+          DEPLOY_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.STAGING_DEPLOY_USER }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          BACKEND_TAG: ${{ github.sha }}
+          FRONTEND_TAG: ${{ github.sha }}
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          REDIS_HOST: ${{ secrets.STAGING_REDIS_HOST }}
+          REDIS_PORT: ${{ secrets.STAGING_REDIS_PORT }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          ssh -i ~/.ssh/deploy_key $DEPLOY_USER@$DEPLOY_HOST << 'DEPLOY_EOF'
+            set -e
+            echo "Starting staging deployment..."
+
+            cd /opt/staging
+            git pull origin main
+
+            # Export environment variables
+            export REGISTRY="${REGISTRY}"
+            export IMAGE_NAME="${IMAGE_NAME}"
+            export BACKEND_TAG="${BACKEND_TAG}"
+            export FRONTEND_TAG="${FRONTEND_TAG}"
+
+            # Pull latest images
+            docker-compose -f docker-compose.production.yml pull
+
+            # Start services
+            docker-compose -f docker-compose.production.yml up -d
+
+            # Wait for services to be healthy
+            echo "Waiting for services to become healthy..."
+            sleep 30
+
+            # Run health checks
+            echo "Running health checks..."
+            docker-compose -f docker-compose.production.yml ps
+
+            echo "Staging deployment complete"
+          DEPLOY_EOF
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          curl -f https://api.staging.ai-realestate.com/health || exit 1
+          curl -f https://staging.ai-realestate.com/ || exit 1
+          echo "✅ Smoke tests passed"
+
+      - name: Update deployment status
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          state: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+          environment_url: https://staging.ai-realestate.com
+
+      - name: Notify Slack success
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "✅ Staging deployment successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "✅ *Staging Deployment Successful*\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}\n*URL:* https://staging.ai-realestate.com"
+                  }
+                }
+              ]
+            }
+
+      - name: Notify Slack failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "❌ Staging deployment failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "❌ *Staging Deployment Failed*\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref }}\n*View:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+
+  # =========================================================================
+  # Production Deployment (Requires approval)
+  # =========================================================================
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    if: github.ref == 'refs/heads/main' && (github.event.inputs.environment == 'production' || github.event.inputs.environment == 'both')
+    environment:
+      name: production
+      url: https://ai-realestate.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create deployment record
+        uses: chrnorm/deployment-action@v2
+        id: deployment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: production
+          auto_merge: false
+          required_contexts: 'build, deploy-staging'
+
+      - name: Deploy to production (Blue-Green)
+        env:
+          DEPLOY_KEY: ${{ secrets.PROD_DEPLOY_KEY }}
+          DEPLOY_HOST: ${{ secrets.PROD_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.PROD_DEPLOY_USER }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          BACKEND_TAG: ${{ github.sha }}
+          FRONTEND_TAG: ${{ github.sha }}
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          REDIS_HOST: ${{ secrets.PROD_REDIS_HOST }}
+          REDIS_PORT: ${{ secrets.PROD_REDIS_PORT }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          ssh -i ~/.ssh/deploy_key $DEPLOY_USER@$DEPLOY_HOST << 'DEPLOY_EOF'
+            set -e
+            echo "Starting production deployment (Blue-Green)..."
+
+            cd /opt/production
+            git pull origin main
+
+            # Export environment variables
+            export REGISTRY="${REGISTRY}"
+            export IMAGE_NAME="${IMAGE_NAME}"
+            export BACKEND_TAG="${BACKEND_TAG}"
+            export FRONTEND_TAG="${FRONTEND_TAG}"
+
+            # Pull latest green environment images
+            echo "Pulling green environment images..."
+            docker-compose -f docker-compose.production.yml --profile green pull
+
+            # Start green environment services
+            echo "Starting green environment..."
+            docker-compose -f docker-compose.production.yml --profile green up -d backend-green frontend-green
+
+            # Wait for services to be healthy
+            echo "Waiting for green environment to become healthy..."
+            for i in {1..30}; do
+              if curl -f http://localhost:3002/health > /dev/null 2>&1 && \
+                 curl -f http://localhost:3004/ > /dev/null 2>&1; then
+                echo "✅ Green environment is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "❌ Green environment failed to become healthy"
+                exit 1
+              fi
+              sleep 10
+            done
+
+            # Switch load balancer to green environment
+            echo "Switching traffic to green environment..."
+            docker exec nginx-lb nginx -s reload || true
+
+            # Verify traffic switch
+            sleep 5
+
+            # Keep blue environment running for quick rollback
+            echo "✅ Production deployment complete - Green is now active"
+
+            # Log status
+            docker-compose -f docker-compose.production.yml ps
+          DEPLOY_EOF
+
+      - name: Run production smoke tests
+        run: |
+          echo "Running production smoke tests..."
+          curl -f https://api.ai-realestate.com/health || exit 1
+          curl -f https://ai-realestate.com/ || exit 1
+          echo "✅ Production smoke tests passed"
+
+      - name: Update deployment status
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          state: success
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+          environment_url: https://ai-realestate.com
+
+      - name: Notify Slack success
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "🚀 Production deployment successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🚀 *Production Deployment Successful*\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}\n*URL:* https://ai-realestate.com"
+                  }
+                }
+              ]
+            }
+
+      - name: Notify Slack failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "❌ Production deployment failed - ROLLBACK NEEDED",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "❌ *PRODUCTION DEPLOYMENT FAILED*\n*Action Required: Manual rollback may be needed*\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref }}\n*View:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }

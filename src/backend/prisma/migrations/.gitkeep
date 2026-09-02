@@ -1,0 +1,2 @@
+# Prisma migrations will be stored in this directory
+# Run: npm run db:migrate --workspace=src/backend

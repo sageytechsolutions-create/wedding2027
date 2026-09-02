@@ -1,19 +1,15 @@
 {
-  "name": "table-nine",
+  "name": "ai-realestate-investment",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
+  "description": "AI-powered real estate investment platform",
+  "workspaces": [
+    "src/backend",
+    "src/frontend"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^5.4.11"
+    "dev": "npm run dev --workspace=src/backend & npm run dev --workspace=src/frontend",
+    "build": "npm run build --workspaces",
+    "start": "npm run start --workspace=src/backend"
   }
 }

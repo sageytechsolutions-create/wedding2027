@@ -1,0 +1,131 @@
+{
+  "username": "${BROWSERSTACK_USERNAME}",
+  "accessKey": "${BROWSERSTACK_ACCESS_KEY}",
+  "buildName": "AI Real Estate Platform - Real Device Tests",
+  "projectName": "wedding2027",
+  "testTimeout": 600,
+  "networkTimeout": 30,
+  "localIdentifier": "${BROWSERSTACK_LOCAL_IDENTIFIER}",
+  "debug": false,
+  "networkLogs": true,
+  "deviceLogs": true,
+  "video": true,
+  "screenshots": true,
+  "appiumVersion": "2.0",
+  "strictSSLCerts": false,
+  "capabilities": {
+    "ios": {
+      "iPhone-13": {
+        "device": "iPhone 13",
+        "os": "iOS",
+        "osVersion": "15",
+        "realMobile": true,
+        "automationName": "XCUITest",
+        "orientation": "portrait"
+      },
+      "iPhone-14": {
+        "device": "iPhone 14",
+        "os": "iOS",
+        "osVersion": "16",
+        "realMobile": true,
+        "automationName": "XCUITest",
+        "orientation": "portrait"
+      },
+      "iPhone-14-Pro": {
+        "device": "iPhone 14 Pro",
+        "os": "iOS",
+        "osVersion": "16",
+        "realMobile": true,
+        "automationName": "XCUITest",
+        "orientation": "portrait"
+      }
+    },
+    "android": {
+      "Pixel-5": {
+        "device": "Google Pixel 5",
+        "os": "Android",
+        "osVersion": "12",
+        "realMobile": true,
+        "automationName": "UiAutomator2",
+        "orientation": "portrait"
+      },
+      "Pixel-6": {
+        "device": "Google Pixel 6",
+        "os": "Android",
+        "osVersion": "13",
+        "realMobile": true,
+        "automationName": "UiAutomator2",
+        "orientation": "portrait"
+      },
+      "Samsung-S21": {
+        "device": "Samsung Galaxy S21",
+        "os": "Android",
+        "osVersion": "12",
+        "realMobile": true,
+        "automationName": "UiAutomator2",
+        "orientation": "portrait"
+      },
+      "Samsung-S22": {
+        "device": "Samsung Galaxy S22",
+        "os": "Android",
+        "osVersion": "13",
+        "realMobile": true,
+        "automationName": "UiAutomator2",
+        "orientation": "portrait"
+      }
+    }
+  },
+  "networkProfiles": {
+    "4G": {
+      "download": 4,
+      "upload": 3,
+      "latency": 50
+    },
+    "LTE": {
+      "download": 10,
+      "upload": 5,
+      "latency": 20
+    },
+    "5G": {
+      "download": 100,
+      "upload": 20,
+      "latency": 5
+    }
+  },
+  "orientations": {
+    "portrait": {
+      "width": "auto",
+      "height": "auto"
+    },
+    "landscape": {
+      "width": "auto",
+      "height": "auto"
+    }
+  },
+  "screenshots": {
+    "baseline": {
+      "location": "./src/frontend/tests/e2e/screenshots/baseline/real-devices",
+      "tolerance": 0.05,
+      "maxDiffPixels": 100
+    },
+    "actual": {
+      "location": "./src/frontend/tests/e2e/screenshots/actual/real-devices"
+    },
+    "diff": {
+      "location": "./src/frontend/tests/e2e/screenshots/diff/real-devices"
+    }
+  },
+  "reports": {
+    "location": "./test-results/real-device-tests",
+    "formats": [
+      "json",
+      "html",
+      "junit"
+    ]
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "location": "./logs/real-device-tests.log"
+  }
+}
