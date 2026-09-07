@@ -1,6 +1,6 @@
 # Getting Started: AI Real Estate Investment Platform
 
-Complete setup and deployment guide for the wedding2027 / AI Real Estate Investment Platform.
+Complete setup and deployment guide for the RealEstate2027 / AI Real Estate Investment Platform.
 
 ## Quick Start
 
