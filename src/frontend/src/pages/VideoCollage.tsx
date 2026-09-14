@@ -1,11 +1,22 @@
-import { useState, useRef } from 'react';
-import { Upload, Trash2, Download, Play, Pause, Loader, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Upload, Trash2, Download, Play, Pause, Loader, AlertCircle, Save, Folder } from 'lucide-react';
 
 interface VideoItem {
   id: string;
   file: File;
   preview: string;
   isPlaying: boolean;
+}
+
+interface Draft {
+  id: string;
+  name: string;
+  videoCount: number;
+  createdAt: string;
+  videos: Array<{
+    id: string;
+    filename: string;
+  }>;
 }
 
 export function VideoCollage() {
@@ -15,8 +26,23 @@ export function VideoCollage() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [collageMode, setCollageMode] = useState<'merge' | 'grid'>('merge');
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [showDrafts, setShowDrafts] = useState(false);
+  const [draftName, setDraftName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
+
+  // Load drafts from localStorage on mount
+  useEffect(() => {
+    const savedDrafts = localStorage.getItem('video-collage-drafts');
+    if (savedDrafts) {
+      try {
+        setDrafts(JSON.parse(savedDrafts));
+      } catch (e) {
+        console.error('Failed to load drafts:', e);
+      }
+    }
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -57,6 +83,49 @@ export function VideoCollage() {
 
   const removeVideo = (id: string) => {
     setVideos((prev) => prev.filter((v) => v.id !== id));
+  };
+
+  const saveDraft = () => {
+    if (!draftName.trim()) {
+      setError('Please enter a draft name');
+      return;
+    }
+
+    if (videos.length === 0) {
+      setError('Please add at least one video before saving');
+      return;
+    }
+
+    const newDraft: Draft = {
+      id: `draft-${Date.now()}`,
+      name: draftName,
+      videoCount: videos.length,
+      createdAt: new Date().toLocaleString(),
+      videos: videos.map((v) => ({
+        id: v.id,
+        filename: v.file.name,
+      })),
+    };
+
+    const updatedDrafts = [...drafts, newDraft];
+    setDrafts(updatedDrafts);
+    localStorage.setItem('video-collage-drafts', JSON.stringify(updatedDrafts));
+
+    setDraftName('');
+    setError(null);
+  };
+
+  const loadDraft = (draft: Draft) => {
+    // Note: This loads draft metadata, but videos need to be re-uploaded
+    // since we can't access files from localStorage for security reasons
+    setError(`Draft "${draft.name}" loaded. Please re-upload the ${draft.videoCount} videos.`);
+    setShowDrafts(false);
+  };
+
+  const deleteDraft = (draftId: string) => {
+    const updatedDrafts = drafts.filter((d) => d.id !== draftId);
+    setDrafts(updatedDrafts);
+    localStorage.setItem('video-collage-drafts', JSON.stringify(updatedDrafts));
   };
 
   const togglePlayPause = (id: string) => {
@@ -127,6 +196,9 @@ export function VideoCollage() {
 
       setProcessingProgress(100);
       setTimeout(() => setProcessingProgress(0), 1000);
+
+      // Show success message but keep videos for potential additional processing
+      setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create video collage';
       setError(errorMessage);
@@ -253,6 +325,70 @@ export function VideoCollage() {
               ))}
             </div>
 
+            {/* Draft Management Section */}
+            <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-blue-900">💾 Save Your Progress</h3>
+                <button
+                  onClick={() => setShowDrafts(!showDrafts)}
+                  className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  <Folder className="w-4 h-4" />
+                  View Drafts ({drafts.length})
+                </button>
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  placeholder="Enter draft name (e.g., 'Birthday Videos Batch 1')"
+                  className="flex-1 px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={saveDraft}
+                  disabled={isProcessing}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Draft
+                </button>
+              </div>
+
+              {/* Drafts List */}
+              {showDrafts && drafts.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <p className="text-sm text-blue-700 mb-3 font-semibold">Saved Drafts:</p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {drafts.map((draft) => (
+                      <div
+                        key={draft.id}
+                        className="flex items-center justify-between p-3 bg-white rounded border border-blue-200"
+                      >
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{draft.name}</p>
+                          <p className="text-sm text-gray-600">
+                            {draft.videoCount} video{draft.videoCount !== 1 ? 's' : ''} • {draft.createdAt}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => deleteDraft(draft.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete draft"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-blue-600 mt-3 italic">
+                    💡 Drafts are saved on this device. Re-upload videos when loading a draft.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Mode Selection */}
             <div className="flex justify-center gap-4 mb-6">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -334,14 +470,16 @@ export function VideoCollage() {
               </button>
               <button
                 onClick={() => {
-                  setVideos([]);
-                  setError(null);
+                  if (confirm('Remove all videos? This cannot be undone.')) {
+                    setVideos([]);
+                    setError(null);
+                  }
                 }}
                 disabled={isProcessing}
                 className={`px-6 py-3 rounded-lg transition-colors ${
                   isProcessing
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                    : 'bg-red-200 text-red-800 hover:bg-red-300'
                 }`}
               >
                 Clear All
@@ -354,8 +492,12 @@ export function VideoCollage() {
         {videos.length === 0 && (
           <div className="text-center py-12 bg-white rounded-lg">
             <div className="text-6xl mb-4">🎥</div>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-lg mb-2">
               Start by uploading videos to create your birthday collage!
+            </p>
+            <p className="text-gray-500 text-sm">
+              💡 Tip: Upload videos at your own pace. They'll stay here until you create the collage.
+              Save drafts to keep track of your progress!
             </p>
           </div>
         )}
