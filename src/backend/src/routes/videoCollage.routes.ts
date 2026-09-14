@@ -29,13 +29,13 @@ const upload = multer({
   },
 });
 
-// Merge videos sequentially
-router.post('/merge', upload.array('videos', 10), async (req, res) => {
+// Merge videos sequentially (max 15 videos)
+router.post('/merge', upload.array('videos', 15), async (req, res) => {
   await videoCollageController.mergeVideos(req, res);
 });
 
-// Create grid collage
-router.post('/grid', upload.array('videos', 10), async (req, res) => {
+// Create grid collage (max 15 videos)
+router.post('/grid', upload.array('videos', 15), async (req, res) => {
   await videoCollageController.createGridCollage(req, res);
 });
 
