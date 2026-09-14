@@ -50,6 +50,9 @@ export function Navigation() {
               <Link to="/transactions" className="hover:text-gray-300">
                 Transactions
               </Link>
+              <Link to="/video-collage" className="hover:text-gray-300">
+                🎉 Video Collage
+              </Link>
               <Link to="/settings" className="hover:text-gray-300">
                 ⚙️ Settings
               </Link>

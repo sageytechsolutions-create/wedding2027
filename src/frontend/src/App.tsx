@@ -17,6 +17,7 @@ import { MarketHeatmap } from './pages/MarketHeatmap';
 import { CustomMetrics } from './pages/CustomMetrics';
 import { Settings } from './pages/Settings';
 import { Notifications } from './pages/Notifications';
+import { VideoCollage } from './pages/VideoCollage';
 
 function App() {
   const { checkAuth, isAuthenticated } = useAuthStore();
@@ -43,6 +44,7 @@ function App() {
         <Route path="/market" element={<MarketAnalysis />} />
         <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
         <Route path="/notifications" element={isAuthenticated ? <Notifications /> : <Navigate to="/login" />} />
+        <Route path="/video-collage" element={<VideoCollage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
