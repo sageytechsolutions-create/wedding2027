@@ -19,6 +19,7 @@ import syncRoutes from './routes/sync.js';
 import emailRoutes from './routes/email.js';
 import metricsRoutes from './routes/metrics.js';
 import reportRoutes from './routes/reports.js';
+import videoCollageRoutes from './routes/videoCollage.routes.js';
 
 const app = express();
 
@@ -74,6 +75,7 @@ app.use('/api/sync', syncRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/video-collage', videoCollageRoutes);
 
 // 404 handler
 app.use((req, res) => {

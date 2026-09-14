@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, Trash2, Download, Play, Pause } from 'lucide-react';
+import { Upload, Trash2, Download, Play, Pause, Loader, AlertCircle } from 'lucide-react';
 
 interface VideoItem {
   id: string;
@@ -11,6 +11,10 @@ interface VideoItem {
 export function VideoCollage() {
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [collageMode, setCollageMode] = useState<'merge' | 'grid'>('merge');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
 
@@ -72,47 +76,64 @@ export function VideoCollage() {
     }
   };
 
-  const downloadCollage = async () => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const cols = Math.ceil(Math.sqrt(videos.length));
-    const rows = Math.ceil(videos.length / cols);
-    const tileSize = 300;
-    const padding = 10;
-
-    canvas.width = cols * (tileSize + padding) + padding;
-    canvas.height = rows * (tileSize + padding) + padding;
-
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    for (let i = 0; i < videos.length; i++) {
-      const row = Math.floor(i / cols);
-      const col = i % cols;
-      const x = col * (tileSize + padding) + padding;
-      const y = row * (tileSize + padding) + padding;
-
-      const video = videoRefs.current[videos[i].id];
-      if (video && video.readyState >= 2) {
-        ctx.drawImage(video, x, y, tileSize, tileSize);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, tileSize, tileSize);
-      }
+  const mergeVideos = async () => {
+    if (videos.length === 0) {
+      setError('Please add at least one video');
+      return;
     }
 
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `moms-60th-birthday-collage-${Date.now()}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
+    setIsProcessing(true);
+    setError(null);
+    setProcessingProgress(0);
+
+    try {
+      const formData = new FormData();
+
+      // Append all video files to FormData
+      for (const video of videos) {
+        formData.append('videos', video.file);
       }
-    });
+
+      formData.append('outputFilename', `moms-60th-birthday-${collageMode}-${Date.now()}.mp4`);
+
+      setProcessingProgress(20);
+
+      const endpoint = collageMode === 'merge'
+        ? '/api/video-collage/merge'
+        : '/api/video-collage/grid';
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create video collage');
+      }
+
+      setProcessingProgress(90);
+
+      // Get the blob and download it
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `moms-60th-birthday-${collageMode}-${Date.now()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setProcessingProgress(100);
+      setTimeout(() => setProcessingProgress(0), 1000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create video collage';
+      setError(errorMessage);
+      console.error('Video merge error:', err);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const gridCols = Math.ceil(Math.sqrt(videos.length)) || 2;
@@ -232,18 +253,96 @@ export function VideoCollage() {
               ))}
             </div>
 
+            {/* Mode Selection */}
+            <div className="flex justify-center gap-4 mb-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="collage-mode"
+                  value="merge"
+                  checked={collageMode === 'merge'}
+                  onChange={(e) => setCollageMode(e.target.value as 'merge' | 'grid')}
+                  className="w-4 h-4"
+                />
+                <span className="text-gray-700">Sequential Merge</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="collage-mode"
+                  value="grid"
+                  checked={collageMode === 'grid'}
+                  onChange={(e) => setCollageMode(e.target.value as 'merge' | 'grid')}
+                  className="w-4 h-4"
+                />
+                <span className="text-gray-700">Grid Layout</span>
+              </label>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-red-900">Error</h3>
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Processing Progress */}
+            {isProcessing && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <Loader className="w-5 h-5 text-blue-600 animate-spin" />
+                  <span className="text-blue-900 font-semibold">
+                    Creating your video collage...
+                  </span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${processingProgress}%` }}
+                  />
+                </div>
+                <p className="text-blue-600 text-sm mt-2">{processingProgress}% complete</p>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex justify-center gap-4">
               <button
-                onClick={downloadCollage}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+                onClick={mergeVideos}
+                disabled={isProcessing || videos.length === 0}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all shadow-lg ${
+                  isProcessing || videos.length === 0
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 hover:shadow-xl'
+                }`}
               >
-                <Download className="w-5 h-5" />
-                Download Collage Screenshot
+                {isProcessing ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5" />
+                    Create & Download Video
+                  </>
+                )}
               </button>
               <button
-                onClick={() => setVideos([])}
-                className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                onClick={() => {
+                  setVideos([]);
+                  setError(null);
+                }}
+                disabled={isProcessing}
+                className={`px-6 py-3 rounded-lg transition-colors ${
+                  isProcessing
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                }`}
               >
                 Clear All
               </button>
