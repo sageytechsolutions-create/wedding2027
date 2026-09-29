@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A restaurant, bakery, butcher, etc. selling through the marketplace.
+model Vendor {
+  id          String @id @default(cuid())
+  slug        String @unique
+  name        String
+  tagline     String
+  story       String
+  city        String
+  state       String
+  originZip   String
+  emoji       String @default("🍽️")
+  accentColor String @default("#f97316")
+
+  // Comma-separated 3-digit ZIP prefixes this vendor can hand-deliver to
+  // next day (e.g. "100,101,112" for Manhattan + Brooklyn). Empty = ship only.
+  localZipPrefixes  String @default("")
+  localDeliveryFee  Int    @default(999) // cents
+  shipsNationwide   Boolean @default(true)
+  overnightShipFee  Int    @default(1999) // cents
+  freeShippingMin   Int?   // cents; order subtotal at which shipping is free
+  commissionRate    Float  @default(0.2) // platform take rate
+
+  active    Boolean  @default(true)
+  featured  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  products     Product[]
+  vendorOrders VendorOrder[]
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  vendorId    String
+  vendor      Vendor  @relation(fields: [vendorId], references: [id])
+  name        String
+  description String
+  price       Int // cents
+  category    String
+  serves      String?
+  emoji       String  @default("🍽️")
+  imageUrl    String?
+  perishable  Boolean @default(true)
+  active      Boolean @default(true)
+  featured    Boolean @default(false)
+  createdAt   DateTime @default(now())
+
+  orderItems OrderItem[]
+}
+
+// What the customer places and pays for. Split into one VendorOrder per vendor.
+model Order {
+  id            String   @id @default(cuid())
+  number        String   @unique
+  email         String
+  name          String
+  phone         String?
+  address1      String
+  address2      String?
+  city          String
+  state         String
+  zip           String
+  giftMessage   String?
+  subtotal      Int
+  shippingTotal Int
+  total         Int
+  paymentStatus String   @default("paid") // paid | refunded | pending
+  createdAt     DateTime @default(now())
+
+  vendorOrders VendorOrder[]
+}
+
+model VendorOrder {
+  id               String    @id @default(cuid())
+  orderId          String
+  order            Order     @relation(fields: [orderId], references: [id])
+  vendorId         String
+  vendor           Vendor    @relation(fields: [vendorId], references: [id])
+  method           String // local_delivery | overnight_shipping
+  shipDate         DateTime
+  deliveryDate     DateTime
+  subtotal         Int
+  shippingFee      Int
+  commission       Int
+  vendorPayout     Int
+  status           String    @default("pending") // pending | preparing | shipped | out_for_delivery | delivered | cancelled
+  trackingNumber   String?
+  carrier          String?
+  updatedAt        DateTime  @updatedAt
+
+  items OrderItem[]
+}
+
+model OrderItem {
+  id            String      @id @default(cuid())
+  vendorOrderId String
+  vendorOrder   VendorOrder @relation(fields: [vendorOrderId], references: [id])
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id])
+  name          String
+  unitPrice     Int
+  quantity      Int
+}
