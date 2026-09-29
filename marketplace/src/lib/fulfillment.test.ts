@@ -37,10 +37,16 @@ describe("quoteFulfillment", () => {
     expect(q).toMatchObject({ deliveryDate: "2026-10-01" });
   });
 
-  it("skips Sunday for local delivery", () => {
-    // Saturday 2026-10-03 morning -> Sunday is skipped -> Monday
+  it("never delivers locally on Shabbat", () => {
+    // Friday 2026-10-02 morning -> Saturday is skipped -> Sunday
+    const q = quoteFulfillment(nycVendor, "10012", 5000, true, morning("2026-10-02"));
+    expect(q).toMatchObject({ deliveryDate: "2026-10-04" });
+  });
+
+  it("delivers locally on Sunday", () => {
+    // An order placed on Shabbat morning still arrives Sunday
     const q = quoteFulfillment(nycVendor, "10012", 5000, true, morning("2026-10-03"));
-    expect(q).toMatchObject({ deliveryDate: "2026-10-05" });
+    expect(q).toMatchObject({ deliveryDate: "2026-10-04" });
   });
 
   it("ships overnight nationwide and arrives next day", () => {

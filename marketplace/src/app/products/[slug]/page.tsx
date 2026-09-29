@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { DeliveryEstimator } from "@/components/DeliveryEstimator";
+import { KosherBadges } from "@/components/KosherBadges";
 import { ProductImage } from "@/components/ProductCard";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
@@ -24,6 +25,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {vendor.emoji} {vendor.name} · {vendor.city}, {vendor.state}
         </Link>
         <h1 className="mt-2 font-display text-4xl font-bold">{product.name}</h1>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <KosherBadges kosherType={product.kosherType} kosherForPassover={product.kosherForPassover} />
+          {vendor.certification && <span className="text-sm text-stone-600">Certified by {vendor.certification}</span>}
+        </div>
         <p className="mt-3 text-2xl font-semibold">{formatMoney(product.price)}</p>
         {product.serves && <p className="mt-1 text-stone-500">Serves {product.serves}</p>}
         <p className="mt-6 text-lg text-stone-700">{product.description}</p>
@@ -46,7 +51,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
         <p className="mt-6 text-sm text-stone-500">
           {product.perishable
-            ? "Perishable. Packed cold and shipped Monday–Thursday so it never sits in a warehouse over the weekend."
+            ? "Perishable. Packed cold and shipped Monday–Thursday so it never sits in a warehouse over Shabbat."
             : "Shelf-stable. Ships Monday–Friday."}
         </p>
       </div>

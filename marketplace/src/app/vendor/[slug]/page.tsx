@@ -4,6 +4,7 @@ import { createProduct, toggleProduct, updateVendorOrder, updateVendorSettings }
 import { db } from "@/lib/db";
 import { formatDeliveryDate, methodLabel } from "@/lib/fulfillment";
 import { formatMoney } from "@/lib/money";
+import { KOSHER_TYPES, kosherLabels } from "@/lib/kosher";
 import { VENDOR_ORDER_STATUSES, statusLabel } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
       <div>
         <p className="text-sm font-medium uppercase tracking-wide text-stone-500">Vendor portal</p>
         <h1 className="font-display text-3xl font-bold">{vendor.emoji} {vendor.name}</h1>
+        {vendor.certification && <p className="text-sm text-stone-500">Hechsher: {vendor.certification}</p>}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -104,6 +106,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
             <li key={p.id} className="flex items-center gap-3 px-5 py-3">
               <span className="text-2xl">{p.emoji}</span>
               <span className={`flex-1 ${p.active ? "" : "text-stone-400 line-through"}`}>{p.name}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs ${kosherLabels[p.kosherType]?.className ?? ""}`}>{kosherLabels[p.kosherType]?.label ?? p.kosherType}</span>
               <span className="text-sm">{formatMoney(p.price)}</span>
               <form action={toggleProduct}>
                 <input type="hidden" name="id" value={p.id} />
@@ -123,11 +126,18 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
             <input name="price" required type="number" step="0.01" min="0" placeholder="Price ($)" className={field} />
             <input name="category" required placeholder="Category (e.g. BBQ, Desserts)" className={field} />
             <input name="serves" placeholder="Serves (e.g. 4–6)" className={field} />
+            <select name="kosherType" required defaultValue="" className={field}>
+              <option value="" disabled>Meat / Dairy / Pareve</option>
+              {KOSHER_TYPES.map((k) => <option key={k} value={k}>{kosherLabels[k].label}</option>)}
+            </select>
             <input name="emoji" placeholder="Emoji (placeholder image)" className={field} />
             <input name="imageUrl" type="url" placeholder="Photo URL (optional)" className={field} />
             <textarea name="description" required placeholder="Description" rows={3} className={`${field} sm:col-span-2`} />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="perishable" defaultChecked /> Perishable (ships Mon–Thu only)
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="kosherForPassover" /> Kosher for Passover
             </label>
             <button className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white sm:justify-self-end">Add product</button>
           </form>

@@ -3,7 +3,7 @@ import { site } from "./config";
 // Decides how a vendor's items reach a customer and when they arrive.
 //
 // - Local delivery: the customer's ZIP is in the vendor's delivery area.
-//   The vendor drives it over the next day (Mon–Sat).
+//   The vendor drives it over the next day (Sun–Fri; never on Shabbat).
 // - Overnight shipping: everyone else in the US. Perishable boxes only ship
 //   Mon–Thu so they never sit in a carrier warehouse over the weekend.
 
@@ -78,7 +78,8 @@ export function localNow(now: Date, timeZone = site.timeZone): { day: Date; hour
 }
 
 // 0 = Sunday … 6 = Saturday
-const LOCAL_DELIVERY_DAYS = new Set([1, 2, 3, 4, 5, 6]);
+// No deliveries on Shabbat. Carriers already skip Saturday via CARRIER_DELIVERY_DAYS.
+const LOCAL_DELIVERY_DAYS = new Set([0, 1, 2, 3, 4, 5]);
 const PERISHABLE_SHIP_DAYS = new Set([1, 2, 3, 4]);
 const STANDARD_SHIP_DAYS = new Set([1, 2, 3, 4, 5]);
 const CARRIER_DELIVERY_DAYS = new Set([1, 2, 3, 4, 5]);
@@ -109,7 +110,8 @@ export function quoteFulfillment(
       available: true,
       method: "local_delivery",
       fee: free ? 0 : rules.localDeliveryFee,
-      shipDate: formatDay(addDays(deliveryDate, -1)),
+      // The vendor drives it out the same day it's delivered.
+      shipDate: formatDay(deliveryDate),
       deliveryDate: formatDay(deliveryDate),
     };
   }

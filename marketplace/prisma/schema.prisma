@@ -18,6 +18,8 @@ model Vendor {
   state       String
   originZip   String
   emoji       String @default("🍽️")
+  // Kosher certifying agency (hechsher), e.g. "OU", "OK", "Star-K", "CRC".
+  certification String @default("")
   accentColor String @default("#f97316")
 
   // Comma-separated 3-digit ZIP prefixes this vendor can hand-deliver to
@@ -47,6 +49,8 @@ model Product {
   price       Int // cents
   category    String
   serves      String?
+  kosherType  String  @default("pareve") // meat | dairy | pareve
+  kosherForPassover Boolean @default(false)
   emoji       String  @default("🍽️")
   imageUrl    String?
   perishable  Boolean @default(true)

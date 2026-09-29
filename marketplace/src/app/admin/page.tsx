@@ -59,6 +59,7 @@ export default async function AdminPage() {
               <tr>
                 <th className="px-4 py-3">Vendor</th>
                 <th className="px-4 py-3">Location</th>
+                <th className="px-4 py-3">Hechsher</th>
                 <th className="px-4 py-3">Products</th>
                 <th className="px-4 py-3">Sales</th>
                 <th className="px-4 py-3">Commission</th>
@@ -72,6 +73,7 @@ export default async function AdminPage() {
                     <Link href={`/vendor/${v.slug}`} className="hover:text-brand">{v.emoji} {v.name}</Link>
                   </td>
                   <td className="px-4 py-3">{v.city}, {v.state}</td>
+                  <td className="px-4 py-3">{v.certification || "—"}</td>
                   <td className="px-4 py-3">{v._count.products}</td>
                   <td className="px-4 py-3">{formatMoney(v.vendorOrders.reduce((s, o) => s + o.subtotal, 0))}</td>
                   <td className="px-4 py-3">{Math.round(v.commissionRate * 100)}%</td>
@@ -97,6 +99,7 @@ export default async function AdminPage() {
               <input name="state" required maxLength={2} placeholder="State (NY)" className={field} />
               <input name="originZip" required pattern="\d{5}" placeholder="Kitchen ZIP" className={field} />
             </div>
+            <input name="certification" required placeholder="Hechsher (OU, OK, Star-K…)" className={field} />
             <input name="emoji" placeholder="Emoji" className={field} />
             <input name="commissionPercent" type="number" min="0" max="60" defaultValue="20" placeholder="Commission %" className={field} />
             <textarea name="story" placeholder="Their story" rows={3} className={`${field} sm:col-span-2`} />

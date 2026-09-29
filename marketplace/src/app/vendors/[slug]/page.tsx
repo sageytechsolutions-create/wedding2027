@@ -22,7 +22,10 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
       <section className="rounded-3xl p-8 sm:p-12" style={{ background: `linear-gradient(135deg, ${vendor.accentColor}18, ${vendor.accentColor}40)` }}>
         <div className="text-6xl">{vendor.emoji}</div>
         <h1 className="mt-4 font-display text-4xl font-bold">{vendor.name}</h1>
-        <p className="mt-1 text-stone-600">{vendor.city}, {vendor.state}</p>
+        <p className="mt-1 text-stone-600">
+          {vendor.city}, {vendor.state}
+          {vendor.certification && <> · Kosher certified by <strong>{vendor.certification}</strong></>}
+        </p>
         <p className="mt-4 max-w-2xl text-lg">{vendor.tagline}</p>
         <p className="mt-3 max-w-2xl text-stone-700">{vendor.story}</p>
         <div className="mt-6 flex flex-wrap gap-3 text-sm">

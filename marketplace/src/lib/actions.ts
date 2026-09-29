@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "./db";
+import { KOSHER_TYPES } from "./kosher";
 import { VENDOR_ORDER_STATUSES } from "./orders";
 
 // NOTE: these actions are unauthenticated in this MVP. Before launch, gate
@@ -42,6 +43,8 @@ export async function createProduct(formData: FormData) {
       price: dollarsToCents,
       category: z.string().min(2).max(40),
       serves: z.string().max(20).optional(),
+      kosherType: z.enum(KOSHER_TYPES),
+      kosherForPassover: z.string().optional(),
       emoji: z.string().max(8).optional(),
       imageUrl: z.string().url().optional().or(z.literal("")),
       perishable: z.string().optional(),
@@ -56,6 +59,8 @@ export async function createProduct(formData: FormData) {
       price: data.price,
       category: data.category,
       serves: data.serves || null,
+      kosherType: data.kosherType,
+      kosherForPassover: data.kosherForPassover === "on",
       emoji: data.emoji || "🍽️",
       imageUrl: data.imageUrl || null,
       perishable: data.perishable === "on",
@@ -110,6 +115,7 @@ export async function createVendor(formData: FormData) {
       state: z.string().length(2),
       originZip: z.string().regex(/^\d{5}$/),
       emoji: z.string().max(8).optional(),
+      certification: z.string().min(1).max(60),
       commissionPercent: z.coerce.number().min(0).max(60),
     })
     .parse(Object.fromEntries(formData));
@@ -125,6 +131,7 @@ export async function createVendor(formData: FormData) {
       state: data.state.toUpperCase(),
       originZip: data.originZip,
       emoji: data.emoji || "🍽️",
+      certification: data.certification,
       commissionRate: data.commissionPercent / 100,
       // Default the delivery area to the vendor's own ZIP3; they can widen it in the portal.
       localZipPrefixes: data.originZip.slice(0, 3),

@@ -19,7 +19,7 @@ export default async function HomePage() {
       <section className="rounded-3xl bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100 px-6 py-14 text-center sm:px-12">
         <h1 className="font-display text-4xl font-bold sm:text-5xl">{site.tagline}</h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-stone-600">
-          Order from beloved restaurants and bakeries across the country. Next-day delivery if you&apos;re local, overnight shipping everywhere else.
+          Certified kosher delis, bakeries and grills from across the country. Next-day delivery if you&apos;re local, overnight shipping everywhere else. Never on Shabbat.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link href="/shop" className="rounded-full bg-brand px-6 py-3 font-medium text-white hover:bg-brand-dark">Shop all food</Link>
@@ -49,7 +49,7 @@ export default async function HomePage() {
       </section>
 
       <section>
-        <h2 className="font-display text-2xl font-bold">Local legends</h2>
+        <h2 className="font-display text-2xl font-bold">Our kosher kitchens</h2>
         <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {vendors.map((v) => (
             <Link key={v.id} href={`/vendors/${v.slug}`} className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white p-5 hover:shadow-md">
@@ -66,8 +66,8 @@ export default async function HomePage() {
       <section className="grid gap-6 rounded-3xl bg-white p-8 sm:grid-cols-3">
         {[
           ["📦", "Shipped overnight", "Packed with ice packs or dry ice and delivered the next business day, anywhere in the US."],
-          ["🚚", "Local next-day delivery", "Live near the kitchen? The vendor hand-delivers it tomorrow."],
-          ["🎁", "Made for gifting", "Add a gift message at checkout and ship straight to someone you love."],
+          ["🚚", "Local next-day delivery", "Live near the kitchen? The vendor hand-delivers it tomorrow, Sunday through Friday."],
+          ["✡️", "Every item certified", "Each vendor's hechsher is listed, and every product is marked meat, dairy or pareve."],
         ].map(([icon, title, body]) => (
           <div key={title}>
             <div className="text-3xl">{icon}</div>

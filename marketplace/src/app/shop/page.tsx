@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { ProductCard } from "@/components/ProductCard";
 import { db } from "@/lib/db";
+import { KOSHER_TYPES, kosherLabels } from "@/lib/kosher";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Shop" };
@@ -13,14 +14,15 @@ const SORTS = {
   newest: [{ createdAt: "desc" }],
 } satisfies Record<string, Prisma.ProductOrderByWithRelationInput[]>;
 
-export default async function ShopPage({ searchParams }: { searchParams: Promise<{ q?: string; category?: string; sort?: string }> }) {
-  const { q = "", category = "", sort = "featured" } = await searchParams;
+export default async function ShopPage({ searchParams }: { searchParams: Promise<{ q?: string; category?: string; sort?: string; kosher?: string }> }) {
+  const { q = "", category = "", sort = "featured", kosher = "" } = await searchParams;
   const orderBy = SORTS[sort as keyof typeof SORTS] ?? SORTS.featured;
 
   const where: Prisma.ProductWhereInput = {
     active: true,
     vendor: { active: true },
     ...(category && { category }),
+    ...(kosher === "passover" ? { kosherForPassover: true } : (KOSHER_TYPES as readonly string[]).includes(kosher) && { kosherType: kosher }),
     ...(q && {
       OR: [
         { name: { contains: q } },
@@ -37,7 +39,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   ]);
 
   const href = (params: Record<string, string>) => {
-    const sp = new URLSearchParams({ ...(q && { q }), ...(category && { category }), ...(sort !== "featured" && { sort }), ...params });
+    const sp = new URLSearchParams({ ...(q && { q }), ...(category && { category }), ...(kosher && { kosher }), ...(sort !== "featured" && { sort }), ...params });
     for (const [k, v] of [...sp.entries()]) if (!v) sp.delete(k);
     return `/shop?${sp}`;
   };
@@ -46,8 +48,13 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
     <div>
       <h1 className="font-display text-3xl font-bold">{category || "All food"}</h1>
       <form className="mt-6 flex flex-wrap gap-3" action="/shop">
-        <input name="q" defaultValue={q} placeholder="Search bagels, brisket, Chicago…" className="min-w-64 flex-1 rounded-lg border border-stone-300 bg-white px-4 py-2" />
+        <input name="q" defaultValue={q} placeholder="Search challah, brisket, Brooklyn…" className="min-w-64 flex-1 rounded-lg border border-stone-300 bg-white px-4 py-2" />
         {category && <input type="hidden" name="category" value={category} />}
+        <select name="kosher" defaultValue={kosher} className="rounded-lg border border-stone-300 bg-white px-3 py-2">
+          <option value="">Meat, dairy & pareve</option>
+          {KOSHER_TYPES.map((k) => <option key={k} value={k}>{kosherLabels[k].label}</option>)}
+          <option value="passover">Kosher for Passover</option>
+        </select>
         <select name="sort" defaultValue={sort} className="rounded-lg border border-stone-300 bg-white px-3 py-2">
           <option value="featured">Featured</option>
           <option value="price-asc">Price: low to high</option>

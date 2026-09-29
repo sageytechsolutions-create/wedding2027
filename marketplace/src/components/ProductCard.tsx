@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KosherBadges } from "./KosherBadges";
 import { formatMoney } from "@/lib/money";
 
 export interface ProductCardData {
@@ -8,6 +9,8 @@ export interface ProductCardData {
   emoji: string;
   imageUrl: string | null;
   serves: string | null;
+  kosherType: string;
+  kosherForPassover: boolean;
   vendor: { name: string; city: string; state: string; accentColor: string };
 }
 
@@ -37,6 +40,9 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           {product.vendor.name} · {product.vendor.city}, {product.vendor.state}
         </p>
         <h3 className="mt-1 font-semibold leading-snug group-hover:text-brand">{product.name}</h3>
+        <div className="mt-2">
+          <KosherBadges kosherType={product.kosherType} kosherForPassover={product.kosherForPassover} />
+        </div>
         <div className="mt-2 flex items-center justify-between text-sm">
           <span className="font-semibold">{formatMoney(product.price)}</span>
           {product.serves && <span className="text-stone-500">Serves {product.serves}</span>}

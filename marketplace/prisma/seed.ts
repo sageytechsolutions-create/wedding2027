@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
-// Fictional demo vendors. Replace with your real vendor roster.
+// Fictional demo kosher vendors. Replace with your real vendor roster.
 const db = new PrismaClient();
 
 type SeedProduct = {
@@ -10,6 +10,8 @@ type SeedProduct = {
   category: string;
   serves?: string;
   emoji: string;
+  kosherType: "meat" | "dairy" | "pareve";
+  kosherForPassover?: boolean;
   perishable?: boolean;
   featured?: boolean;
 };
@@ -23,6 +25,7 @@ const vendors: {
   state: string;
   originZip: string;
   emoji: string;
+  certification: string;
   accentColor: string;
   localZipPrefixes: string;
   freeShippingMin?: number;
@@ -31,110 +34,116 @@ const vendors: {
   products: SeedProduct[];
 }[] = [
   {
-    slug: "mulberry-street-bagels",
-    name: "Mulberry Street Bagels",
-    tagline: "Hand-rolled, kettle-boiled since 1962",
-    story: "Three generations of the same family have boiled bagels in the same copper kettle on Mulberry Street. We bake overnight and pack them the morning they ship.",
-    city: "New York",
+    slug: "boro-park-bakery",
+    name: "Boro Park Bakery",
+    tagline: "Challah, babka and rugelach since 1971",
+    story: "Braided by hand every Thursday night and Friday morning. Our chocolate babka recipe hasn't changed in fifty years.",
+    city: "Brooklyn",
     state: "NY",
-    originZip: "10013",
-    emoji: "🥯",
+    originZip: "11219",
+    emoji: "🥖",
+    certification: "OK",
     accentColor: "#d97706",
-    localZipPrefixes: "100,101,102,112,113,114",
-    freeShippingMin: 12000,
+    localZipPrefixes: "100,101,102,104,112,113,114,110,115",
+    freeShippingMin: 10000,
     featured: true,
     products: [
-      { name: "Dozen Bagel Sampler + Schmear", description: "12 hand-rolled bagels (everything, sesame, poppy, plain) with two tubs of whipped cream cheese.", price: 6900, category: "Breakfast", serves: "6–8", emoji: "🥯", featured: true },
-      { name: "Lox & Bagel Brunch Kit", description: "Six bagels, ½ lb hand-sliced Nova lox, scallion schmear, capers and red onion.", price: 9900, category: "Breakfast", serves: "4–6", emoji: "🐟" },
-      { name: "Black & White Cookies (8)", description: "Soft cake cookies half-dipped in vanilla and chocolate fondant.", price: 4200, category: "Desserts", serves: "8", emoji: "🍪", perishable: false },
+      { name: "Shabbos Challah Pair", description: "Two 1.5 lb braided challahs, plain or sesame. Pareve.", price: 2400, category: "Bakery", serves: "8–10", emoji: "🥖", kosherType: "pareve", featured: true },
+      { name: "Chocolate Babka (2)", description: "Two loaves of our dense, fudgy chocolate babka. Pareve.", price: 3600, category: "Desserts", serves: "12", emoji: "🍫", kosherType: "pareve", perishable: false, featured: true },
+      { name: "Rugelach Tin", description: "2 lbs of cinnamon, raspberry and chocolate rugelach made with real butter. Cholov Yisroel.", price: 4200, category: "Desserts", serves: "15+", emoji: "🥐", kosherType: "dairy", perishable: false },
     ],
   },
   {
-    slug: "big-sky-smokehouse",
-    name: "Big Sky Smokehouse",
-    tagline: "Post-oak brisket, smoked 16 hours",
-    story: "Our pits run 24/7 off Texas post oak. Every brisket is trimmed by hand, rubbed with salt and pepper, and smoked low until it jiggles.",
-    city: "Austin",
-    state: "TX",
-    originZip: "78702",
-    emoji: "🔥",
+    slug: "lower-east-deli",
+    name: "Lower East Deli",
+    tagline: "Hand-cut pastrami the old-world way",
+    story: "Brined for three weeks, smoked, then steamed for hours. Glatt kosher and piled high.",
+    city: "New York",
+    state: "NY",
+    originZip: "10002",
+    emoji: "🥪",
+    certification: "OU",
     accentColor: "#b91c1c",
-    localZipPrefixes: "786,787",
+    localZipPrefixes: "100,101,102,112,113,114",
     freeShippingMin: 15000,
     featured: true,
     products: [
-      { name: "Whole Smoked Brisket", description: "A full packer brisket, 5–6 lbs cooked, vacuum sealed with reheating instructions.", price: 17900, category: "BBQ", serves: "10–12", emoji: "🥩", featured: true },
-      { name: "Rib & Sausage Combo", description: "Two racks of pork spare ribs plus 2 lbs of jalapeño cheddar sausage.", price: 12900, category: "BBQ", serves: "6–8", emoji: "🍖" },
-      { name: "House BBQ Sauce Trio", description: "Original, Espresso, and Hot. Three 12oz bottles.", price: 2900, category: "Pantry", emoji: "🌶️", perishable: false },
+      { name: "Pastrami & Corned Beef Feast", description: "1 lb pastrami, 1 lb corned beef, rye bread, deli mustard, and full-sour pickles. Glatt kosher.", price: 11900, category: "Deli", serves: "6–8", emoji: "🥪", kosherType: "meat", featured: true },
+      { name: "Matzo Ball Soup (2 qts)", description: "Golden chicken soup with four fluffy matzo balls, carrots and dill.", price: 5400, category: "Soups", serves: "6", emoji: "🍲", kosherType: "meat" },
+      { name: "Potato Knish Dozen", description: "Twelve square potato knishes, ready to bake.", price: 3900, category: "Deli", serves: "12", emoji: "🥔", kosherType: "pareve" },
     ],
   },
   {
-    slug: "lakeshore-deep-dish",
-    name: "Lakeshore Deep Dish",
-    tagline: "Buttery-crust Chicago deep dish",
-    story: "Par-baked in our seasoned pans, flash frozen, and packed in dry ice so you can finish it in your own oven.",
-    city: "Chicago",
-    state: "IL",
-    originZip: "60611",
-    emoji: "🍕",
-    accentColor: "#dc2626",
-    localZipPrefixes: "600,606,607,608",
+    slug: "lone-star-kosher-bbq",
+    name: "Lone Star Kosher BBQ",
+    tagline: "Glatt kosher Texas brisket, smoked 16 hours",
+    story: "Proof that great barbecue and kashrut go together. Post-oak smoke, salt and pepper, and a lot of patience.",
+    city: "Dallas",
+    state: "TX",
+    originZip: "75230",
+    emoji: "🔥",
+    certification: "Dallas Kosher",
+    accentColor: "#9a3412",
+    localZipPrefixes: "750,752",
+    freeShippingMin: 15000,
     featured: true,
     products: [
-      { name: "Deep Dish Pizza 4-Pack", description: "Two cheese, two sausage. 9-inch pies, ready in 40 minutes.", price: 8900, category: "Pizza", serves: "8", emoji: "🍕", featured: true },
-      { name: "Italian Beef Kit", description: "2 lbs thin-sliced beef, jus, giardiniera, sweet peppers and 8 rolls.", price: 9400, category: "Sandwiches", serves: "8", emoji: "🥪" },
+      { name: "Whole Smoked Brisket", description: "A full brisket, 5–6 lbs cooked, vacuum sealed with reheating instructions. Glatt kosher.", price: 18900, category: "BBQ", serves: "10–12", emoji: "🥩", kosherType: "meat", featured: true },
+      { name: "Beef Rib & Pulled Brisket Combo", description: "Four beef short ribs plus 2 lbs of pulled brisket.", price: 14900, category: "BBQ", serves: "6–8", emoji: "🍖", kosherType: "meat" },
+      { name: "BBQ Sauce Trio", description: "Original, Honey Chipotle and Hot. Three 12oz bottles.", price: 2900, category: "Pantry", emoji: "🌶️", kosherType: "pareve", perishable: false, kosherForPassover: false },
     ],
   },
   {
-    slug: "bayou-king-cakes",
-    name: "Bayou King Cakes",
-    tagline: "New Orleans cakes & crawfish boil kits",
-    story: "Braided brioche, cinnamon, and a whole lot of purple, green and gold. Baked in the Marigny since 1988.",
-    city: "New Orleans",
-    state: "LA",
-    originZip: "70117",
-    emoji: "🎭",
+    slug: "miami-beach-smokehouse-fish",
+    name: "Miami Beach Appetizing",
+    tagline: "Lox, whitefish and bagels for the perfect brunch",
+    story: "Hand-sliced Nova, smoked whitefish salad, and bagels boiled every morning on Arthur Godfrey Road.",
+    city: "Miami Beach",
+    state: "FL",
+    originZip: "33140",
+    emoji: "🐟",
+    certification: "ORC",
+    accentColor: "#0369a1",
+    localZipPrefixes: "331,330",
+    featured: true,
+    products: [
+      { name: "Bagel & Lox Brunch Box", description: "Dozen bagels, ½ lb Nova lox, whitefish salad, scallion cream cheese, capers and onion. Dairy.", price: 12900, category: "Brunch", serves: "6–8", emoji: "🥯", kosherType: "dairy", featured: true },
+      { name: "Smoked Whitefish Salad (2 lbs)", description: "Creamy, smoky, classic. Pareve.", price: 5900, category: "Brunch", serves: "8–10", emoji: "🐟", kosherType: "pareve" },
+    ],
+  },
+  {
+    slug: "pico-boulevard-grill",
+    name: "Pico Boulevard Grill",
+    tagline: "Israeli street food from LA's kosher corridor",
+    story: "Shawarma turned on the spit all day, pitas baked to order, and our grandmother's schug.",
+    city: "Los Angeles",
+    state: "CA",
+    originZip: "90035",
+    emoji: "🥙",
+    certification: "KSA",
+    accentColor: "#15803d",
+    localZipPrefixes: "900,902,912",
+    products: [
+      { name: "Shawarma Party Kit", description: "3 lbs chicken shawarma, 12 pitas, hummus, tahini, Israeli salad and schug.", price: 13400, category: "Israeli", serves: "8–10", emoji: "🥙", kosherType: "meat", featured: true },
+      { name: "Hummus & Dips Sampler", description: "Hummus, babaganoush, matbucha and tahini, one pint each.", price: 4400, category: "Israeli", serves: "10+", emoji: "🧆", kosherType: "pareve" },
+    ],
+  },
+  {
+    slug: "sweet-lakewood-chocolatier",
+    name: "Lakewood Chocolatier",
+    tagline: "Handmade chocolates for simchas and Mishloach Manos",
+    story: "Small-batch chocolates and gift boxes, packed beautifully for every Yom Tov and simcha.",
+    city: "Lakewood",
+    state: "NJ",
+    originZip: "08701",
+    emoji: "🍫",
+    certification: "CRC",
     accentColor: "#7c3aed",
-    localZipPrefixes: "700,701",
+    localZipPrefixes: "087,077",
     freeShippingMin: 10000,
     products: [
-      { name: "Traditional King Cake", description: "Cinnamon brioche with classic icing and colored sugar. Baby included.", price: 5400, category: "Desserts", serves: "12–15", emoji: "🎂", featured: true },
-      { name: "Cream Cheese King Cake", description: "Filled with sweet cream cheese. Our best seller.", price: 5900, category: "Desserts", serves: "12–15", emoji: "🍰" },
-      { name: "Gumbo Kit", description: "Two quarts of chicken & andouille gumbo with rice.", price: 7900, category: "Soups", serves: "6", emoji: "🍲" },
-    ],
-  },
-  {
-    slug: "harbor-lobster-co",
-    name: "Harbor Lobster Co.",
-    tagline: "Maine lobster rolls, off the boat",
-    story: "We buy directly from the Portland pier each morning. Claw and knuckle meat, cooked and picked the same day.",
-    city: "Portland",
-    state: "ME",
-    originZip: "04101",
-    emoji: "🦞",
-    accentColor: "#0369a1",
-    localZipPrefixes: "040,041",
-    featured: true,
-    products: [
-      { name: "Lobster Roll Kit (4)", description: "1 lb fresh-picked lobster meat, split-top rolls, butter and mayo.", price: 13900, category: "Seafood", serves: "4", emoji: "🦞", featured: true },
-      { name: "New England Clam Chowder", description: "Two quarts of our creamy chowder with oyster crackers.", price: 6400, category: "Soups", serves: "6", emoji: "🥣" },
-    ],
-  },
-  {
-    slug: "golden-gate-sourdough",
-    name: "Golden Gate Sourdough",
-    tagline: "A 90-year-old starter, still going",
-    story: "Our mother dough came over on a steamship in 1935. We still feed her twice a day.",
-    city: "San Francisco",
-    state: "CA",
-    originZip: "94133",
-    emoji: "🍞",
-    accentColor: "#92400e",
-    localZipPrefixes: "940,941,945,946",
-    shipsNationwide: true,
-    products: [
-      { name: "Sourdough Round Trio", description: "Three 1.5 lb rounds: classic, olive, and seeded.", price: 4800, category: "Bakery", serves: "10+", emoji: "🍞" },
-      { name: "Clam Chowder Bread Bowls", description: "Four sourdough bowls with a quart of chowder.", price: 6900, category: "Soups", serves: "4", emoji: "🥖" },
+      { name: "Signature Truffle Box (24)", description: "Two dozen assorted truffles. Cholov Yisroel dairy.", price: 5800, category: "Gifts", serves: "12+", emoji: "🍫", kosherType: "dairy", perishable: false },
+      { name: "Passover Chocolate Gift Tower", description: "Three tiers of pareve chocolate barks, macaroons and nut clusters. Kosher for Passover.", price: 7900, category: "Gifts", serves: "15+", emoji: "🎁", kosherType: "pareve", perishable: false, kosherForPassover: true, featured: true },
     ],
   },
 ];

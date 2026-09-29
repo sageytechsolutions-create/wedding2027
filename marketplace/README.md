@@ -1,11 +1,12 @@
-# Hometown Table: multi-vendor food marketplace
+# KosherValet: multi-vendor kosher food marketplace
 
-A Goldbelly-style marketplace. Many vendors (restaurants, bakeries, smokehouses) list
+A Goldbelly-style marketplace for kosher food. Many certified vendors (delis, bakeries, grills) list
 products; a customer buys from any of them in one checkout; each vendor ships their
 part of the order themselves.
 
-- **Local next-day delivery** when the customer's ZIP is inside the vendor's delivery area.
-- **Overnight shipping nationwide** everywhere else. Perishables ship Mon–Thu only so boxes never sit over a weekend.
+- **Local next-day delivery** when the customer's ZIP is inside the vendor's delivery area (Sun–Fri, never on Shabbat).
+- **Overnight shipping nationwide** everywhere else. Perishables ship Mon–Thu only so boxes never sit in a warehouse over Shabbat.
+- **Kosher info**: each vendor lists its hechsher; each product is marked meat, dairy or pareve, and optionally kosher for Passover. Shoppers can filter by these.
 
 ## Run it
 
