@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "./db";
-import { KOSHER_TYPES } from "./kosher";
+import { KOSHER_LABELS, KOSHER_TYPES } from "./kosher";
+import { sendPendingPayouts } from "./orders";
+import { siteUrl, stripe } from "./stripe";
 import { VENDOR_ORDER_STATUSES } from "./orders";
 
 // NOTE: these actions are unauthenticated in this MVP. Before launch, gate
@@ -45,11 +47,12 @@ export async function createProduct(formData: FormData) {
       serves: z.string().max(20).optional(),
       kosherType: z.enum(KOSHER_TYPES),
       kosherForPassover: z.string().optional(),
+      labels: z.array(z.enum(Object.keys(KOSHER_LABELS) as [keyof typeof KOSHER_LABELS])).default([]),
       emoji: z.string().max(8).optional(),
       imageUrl: z.string().url().optional().or(z.literal("")),
       perishable: z.string().optional(),
     })
-    .parse(Object.fromEntries(formData));
+    .parse({ ...Object.fromEntries(formData), labels: formData.getAll("labels") });
   await db.product.create({
     data: {
       vendorId: data.vendorId,
@@ -64,6 +67,7 @@ export async function createProduct(formData: FormData) {
       emoji: data.emoji || "🍽️",
       imageUrl: data.imageUrl || null,
       perishable: data.perishable === "on",
+      labels: data.labels.join(","),
     },
   });
   revalidatePath(`/vendor/${data.vendorSlug}`);
@@ -84,6 +88,7 @@ export async function updateVendorSettings(formData: FormData) {
       localZipPrefixes: z.string().max(500),
       localDeliveryFee: dollarsToCents,
       overnightShipFee: dollarsToCents,
+      priorityFee: dollarsToCents,
       freeShippingMin: z.string().optional(),
       shipsNationwide: z.string().optional(),
     })
@@ -100,6 +105,7 @@ export async function updateVendorSettings(formData: FormData) {
       overnightShipFee: data.overnightShipFee,
       freeShippingMin: freeMin != null && Number.isFinite(freeMin) ? freeMin : null,
       shipsNationwide: data.shipsNationwide === "on",
+      priorityFee: data.priorityFee,
     },
   });
   revalidatePath(`/vendor/${data.slug}`);
@@ -145,4 +151,43 @@ export async function toggleVendor(formData: FormData) {
   const vendor = await db.vendor.findUniqueOrThrow({ where: { id } });
   await db.vendor.update({ where: { id }, data: { active: !vendor.active } });
   revalidatePath("/admin");
+}
+
+// Starts (or resumes) Stripe Express onboarding so the vendor can receive payouts.
+export async function connectStripe(formData: FormData) {
+  const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
+  if (!stripe) throw new Error("Stripe is not configured");
+  const vendor = await db.vendor.findUniqueOrThrow({ where: { id } });
+  let accountId = vendor.stripeAccountId;
+  if (!accountId) {
+    const account = await stripe.accounts.create({
+      type: "express",
+      country: "US",
+      business_profile: { name: vendor.name, mcc: "5499" }, // misc. food stores
+      capabilities: { transfers: { requested: true } },
+      metadata: { vendorId: vendor.id },
+    });
+    accountId = account.id;
+    await db.vendor.update({ where: { id }, data: { stripeAccountId: accountId } });
+  }
+  const link = await stripe.accountLinks.create({
+    account: accountId,
+    type: "account_onboarding",
+    refresh_url: `${siteUrl()}/vendor/${vendor.slug}`,
+    return_url: `${siteUrl()}/vendor/${vendor.slug}`,
+  });
+  redirect(link.url);
+}
+
+// Checks whether the vendor finished Stripe onboarding, and if so sends any payouts they're owed.
+export async function refreshStripeStatus(vendorId: string) {
+  if (!stripe) return;
+  const vendor = await db.vendor.findUniqueOrThrow({ where: { id: vendorId } });
+  if (!vendor.stripeAccountId) return;
+  const account = await stripe.accounts.retrieve(vendor.stripeAccountId);
+  const enabled = account.payouts_enabled === true && account.capabilities?.transfers === "active";
+  if (enabled !== vendor.stripePayoutsEnabled) {
+    await db.vendor.update({ where: { id: vendorId }, data: { stripePayoutsEnabled: enabled } });
+  }
+  if (enabled) await sendPendingPayouts({ vendorId });
 }

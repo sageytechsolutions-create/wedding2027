@@ -3,18 +3,45 @@ import Link from "next/link";
 import { CartProvider } from "@/components/cart";
 import { CartLink } from "@/components/CartLink";
 import { site } from "@/lib/config";
+import { formatDeliveryDate, localNow } from "@/lib/fulfillment";
+import { upcomingHoliday } from "@/lib/jewish-calendar";
+import { currentStoreStatus } from "@/lib/store-hours";
 import "./globals.css";
+
+// Store hours and holiday banners depend on the current time.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: { default: site.name, template: `%s · ${site.name}` },
   description: site.tagline,
 };
 
+function Banner() {
+  const status = currentStoreStatus();
+  if (status.open && status.closesToday) {
+    return (
+      <div className="bg-stone-900 px-4 py-2 text-center text-sm text-white">
+        🕯️ We close for {status.closesToday.reason} today at {status.closesToday.at}. Get your order in!
+      </div>
+    );
+  }
+  const holiday = upcomingHoliday(localNow(new Date()).day);
+  if (holiday) {
+    return (
+      <div className="bg-amber-100 px-4 py-2 text-center text-sm text-amber-900">
+        {holiday.name} begins at sundown on {formatDeliveryDate(holiday.erev)}. Choose ⚡ priority delivery at checkout to get your order in time.
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
         <CartProvider>
+          <Banner />
           <header className="sticky top-0 z-10 border-b border-stone-200 bg-cream/90 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
               <Link href="/" className="font-display text-2xl font-bold text-brand">{site.name}</Link>

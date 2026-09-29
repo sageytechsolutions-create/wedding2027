@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ClearCart } from "@/components/ClearCart";
 import { StatusBadge } from "@/components/StatusBadge";
 import { db } from "@/lib/db";
 import { formatDeliveryDate, methodLabel } from "@/lib/fulfillment";
@@ -26,20 +27,41 @@ export default async function OrderPage({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="rounded-3xl bg-emerald-50 p-8 text-center">
-        <div className="text-5xl">🎉</div>
-        <h1 className="mt-3 font-display text-3xl font-bold">Thanks, {order.name.split(" ")[0]}!</h1>
-        <p className="mt-2 text-stone-600">
-          Order <strong>{order.number}</strong> is confirmed. Bookmark this page to check on your delivery.
-        </p>
-      </div>
+      {order.paymentStatus === "paid" ? (
+        <div className="rounded-3xl bg-emerald-50 p-8 text-center">
+          <ClearCart />
+          <div className="text-5xl">🎉</div>
+          <h1 className="mt-3 font-display text-3xl font-bold">Thanks, {order.name.split(" ")[0]}!</h1>
+          <p className="mt-2 text-stone-600">
+            Order <strong>{order.number}</strong> is confirmed. Bookmark this page to check on your delivery.
+          </p>
+        </div>
+      ) : order.paymentStatus === "pending" ? (
+        <div className="rounded-3xl bg-amber-50 p-8 text-center">
+          <div className="text-5xl">⏳</div>
+          <h1 className="mt-3 font-display text-3xl font-bold">Confirming your payment…</h1>
+          <p className="mt-2 text-stone-600">This usually takes a few seconds. Refresh this page in a moment.</p>
+        </div>
+      ) : (
+        <div className="rounded-3xl bg-red-50 p-8 text-center">
+          <h1 className="font-display text-3xl font-bold">This order wasn&apos;t paid</h1>
+          <p className="mt-2 text-stone-600">
+            The payment was not completed, so nothing will ship. <Link href="/cart" className="text-brand">Return to your cart</Link>.
+          </p>
+        </div>
+      )}
 
       <div className="mt-8 space-y-5">
         {order.vendorOrders.map((vo) => (
           <section key={vo.id} className="rounded-2xl border border-stone-200 bg-white p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">{vo.vendor.emoji} {vo.vendor.name}</h2>
-              <StatusBadge status={vo.status} />
+              <span className="flex gap-2">
+                {vo.priority && (
+                  <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">⚡ Priority before {vo.holidayName}</span>
+                )}
+                <StatusBadge status={vo.status} />
+              </span>
             </div>
             <p className="mt-1 text-sm text-stone-600">
               {methodLabel(vo.method)}. Arrives <strong>{formatDeliveryDate(vo.deliveryDate)}</strong>
@@ -55,7 +77,7 @@ export default async function OrderPage({
                 </li>
               ))}
               <li className="flex justify-between text-stone-500">
-                <span>Shipping</span>
+                <span>{vo.priority ? "Priority delivery" : "Shipping"}</span>
                 <span>{vo.shippingFee === 0 ? "Free" : formatMoney(vo.shippingFee)}</span>
               </li>
             </ul>

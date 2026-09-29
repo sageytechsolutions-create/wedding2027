@@ -11,17 +11,19 @@
     "test": "vitest run",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
+    "db:reset": "rm -f prisma/dev.db && prisma db push && tsx prisma/seed.ts",
     "setup": "prisma db push && tsx prisma/seed.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@hebcal/core": "^6.10.0",
     "@prisma/client": "^6.19.3",
     "next": "^15.5.26",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "stripe": "^22.6.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {

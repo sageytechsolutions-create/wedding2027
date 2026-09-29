@@ -30,6 +30,11 @@ model Vendor {
   overnightShipFee  Int    @default(1999) // cents
   freeShippingMin   Int?   // cents; order subtotal at which shipping is free
   commissionRate    Float  @default(0.2) // platform take rate
+  priorityFee       Int    @default(1499) // cents; pre-Yom Tov priority delivery
+
+  // Stripe Connect (Express) account that receives this vendor's payouts.
+  stripeAccountId      String?
+  stripePayoutsEnabled Boolean @default(false)
 
   active    Boolean  @default(true)
   featured  Boolean  @default(false)
@@ -51,6 +56,8 @@ model Product {
   serves      String?
   kosherType  String  @default("pareve") // meat | dairy | pareve
   kosherForPassover Boolean @default(false)
+  // Comma-separated keys from KOSHER_LABELS in src/lib/kosher.ts, e.g. "glatt,bishul-yisroel".
+  labels      String  @default("")
   emoji       String  @default("🍽️")
   imageUrl    String?
   perishable  Boolean @default(true)
@@ -77,7 +84,9 @@ model Order {
   subtotal      Int
   shippingTotal Int
   total         Int
-  paymentStatus String   @default("paid") // paid | refunded | pending
+  paymentStatus String   @default("pending") // pending | paid | expired | refunded
+  stripeSessionId       String? @unique
+  stripePaymentIntentId String?
   createdAt     DateTime @default(now())
 
   vendorOrders VendorOrder[]
@@ -90,11 +99,14 @@ model VendorOrder {
   vendorId         String
   vendor           Vendor    @relation(fields: [vendorId], references: [id])
   method           String // local_delivery | overnight_shipping
-  shipDate         DateTime
+  shipDate         DateTime // local delivery: the day it goes out
   deliveryDate     DateTime
   subtotal         Int
   shippingFee      Int
   commission       Int
+  priority         Boolean   @default(false)
+  holidayName      String?
+  stripeTransferId String?
   vendorPayout     Int
   status           String    @default("pending") // pending | preparing | shipped | out_for_delivery | delivered | cancelled
   trackingNumber   String?

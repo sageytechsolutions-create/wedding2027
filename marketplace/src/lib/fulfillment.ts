@@ -1,11 +1,13 @@
 import { site } from "./config";
+import { isRestDay, upcomingHoliday } from "./jewish-calendar";
 
 // Decides how a vendor's items reach a customer and when they arrive.
 //
 // - Local delivery: the customer's ZIP is in the vendor's delivery area.
-//   The vendor drives it over the next day (Sun–Fri; never on Shabbat).
+//   The vendor drives it over the next day (never on Shabbat or Yom Tov).
 // - Overnight shipping: everyone else in the US. Perishable boxes only ship
-//   Mon–Thu so they never sit in a carrier warehouse over the weekend.
+//   Mon–Thu, and never the day before Yom Tov, so they never sit in a
+//   carrier warehouse.
 
 export type FulfillmentMethod = "local_delivery" | "overnight_shipping";
 
@@ -15,6 +17,15 @@ export interface VendorShippingRules {
   shipsNationwide: boolean;
   overnightShipFee: number;
   freeShippingMin: number | null;
+  priorityFee: number;
+}
+
+// Offered in the two weeks before Yom Tov: guaranteed to arrive before the holiday.
+export interface PriorityOption {
+  fee: number;
+  holidayName: string;
+  shipDate: string;
+  deliveryDate: string;
 }
 
 export type FulfillmentQuote =
@@ -24,6 +35,8 @@ export type FulfillmentQuote =
       fee: number;
       shipDate: string; // YYYY-MM-DD
       deliveryDate: string; // YYYY-MM-DD
+      holiday?: { name: string; firstDay: string; arrivesBefore: boolean };
+      priority?: PriorityOption;
     }
   | { available: false; reason: string };
 
@@ -77,18 +90,19 @@ export function localNow(now: Date, timeZone = site.timeZone): { day: Date; hour
   };
 }
 
-// 0 = Sunday … 6 = Saturday
-// No deliveries on Shabbat. Carriers already skip Saturday via CARRIER_DELIVERY_DAYS.
-const LOCAL_DELIVERY_DAYS = new Set([0, 1, 2, 3, 4, 5]);
+// 0 = Sunday … 6 = Saturday. Rest days (Shabbat and Yom Tov) are excluded on top of these.
 const PERISHABLE_SHIP_DAYS = new Set([1, 2, 3, 4]);
 const STANDARD_SHIP_DAYS = new Set([1, 2, 3, 4, 5]);
 const CARRIER_DELIVERY_DAYS = new Set([1, 2, 3, 4, 5]);
 
-function nextDayIn(from: Date, allowed: Set<number>): Date {
+function firstDay(from: Date, ok: (day: Date) => boolean): Date {
   let day = from;
-  while (!allowed.has(day.getUTCDay())) day = addDays(day, 1);
+  for (let i = 0; i < 60 && !ok(day); i++) day = addDays(day, 1);
   return day;
 }
+
+const workDay = (day: Date) => !isRestDay(day);
+const carrierDeliveryDay = (day: Date) => CARRIER_DELIVERY_DAYS.has(day.getUTCDay()) && workDay(day);
 
 export function quoteFulfillment(
   rules: VendorShippingRules,
@@ -100,34 +114,58 @@ export function quoteFulfillment(
   if (!isValidZip(zip)) return { available: false, reason: "Enter a valid 5-digit ZIP code." };
 
   const { day: today, hour } = localNow(now);
-  // Past the cutoff, the vendor can't prepare it today, so the earliest it can leave is tomorrow.
-  const earliestPrepDay = hour < site.orderCutoffHour ? today : addDays(today, 1);
+  // Past the cutoff, the vendor can't prepare it today. Nothing is prepared on Shabbat or Yom Tov.
+  const prepDay = firstDay(hour < site.orderCutoffHour ? today : addDays(today, 1), workDay);
   const free = rules.freeShippingMin != null && subtotal >= rules.freeShippingMin;
+  const holiday = upcomingHoliday(today);
+  const beforeHoliday = (day: Date) => holiday != null && formatDay(day) < holiday.firstDay;
+
+  let method: FulfillmentMethod;
+  let fee: number;
+  let shipDate: Date;
+  let deliveryDate: Date;
+  let priority: PriorityOption | undefined;
 
   if (isLocalZip(rules, zip)) {
-    const deliveryDate = nextDayIn(addDays(earliestPrepDay, 1), LOCAL_DELIVERY_DAYS);
-    return {
-      available: true,
-      method: "local_delivery",
-      fee: free ? 0 : rules.localDeliveryFee,
-      // The vendor drives it out the same day it's delivered.
-      shipDate: formatDay(deliveryDate),
-      deliveryDate: formatDay(deliveryDate),
-    };
+    method = "local_delivery";
+    fee = free ? 0 : rules.localDeliveryFee;
+    // The vendor drives it out the same day it's delivered.
+    deliveryDate = firstDay(addDays(prepDay, 1), workDay);
+    shipDate = deliveryDate;
+    if (holiday) {
+      // Priority: same-day delivery when the order is in before the cutoff.
+      const rush = formatDay(prepDay) === formatDay(today) ? today : deliveryDate;
+      if (beforeHoliday(rush)) {
+        priority = { fee: rules.priorityFee, holidayName: holiday.name, shipDate: formatDay(rush), deliveryDate: formatDay(rush) };
+      }
+    }
+  } else {
+    if (!rules.shipsNationwide) {
+      return { available: false, reason: "This vendor only delivers locally and doesn't reach your ZIP yet." };
+    }
+    method = "overnight_shipping";
+    fee = free ? 0 : rules.overnightShipFee;
+    const shipDays = perishable ? PERISHABLE_SHIP_DAYS : STANDARD_SHIP_DAYS;
+    // Perishables must arrive the very next day, so the day after shipping has to be a delivery day too.
+    shipDate = firstDay(
+      prepDay,
+      (d) => shipDays.has(d.getUTCDay()) && workDay(d) && (!perishable || carrierDeliveryDay(addDays(d, 1))),
+    );
+    deliveryDate = firstDay(addDays(shipDate, 1), carrierDeliveryDay);
+    if (holiday && beforeHoliday(deliveryDate)) {
+      // Priority: packed first and guaranteed to arrive before Yom Tov.
+      priority = { fee: rules.priorityFee, holidayName: holiday.name, shipDate: formatDay(shipDate), deliveryDate: formatDay(deliveryDate) };
+    }
   }
 
-  if (!rules.shipsNationwide) {
-    return { available: false, reason: "This vendor only delivers locally and doesn't reach your ZIP yet." };
-  }
-
-  const shipDate = nextDayIn(earliestPrepDay, perishable ? PERISHABLE_SHIP_DAYS : STANDARD_SHIP_DAYS);
-  const deliveryDate = nextDayIn(addDays(shipDate, 1), CARRIER_DELIVERY_DAYS);
   return {
     available: true,
-    method: "overnight_shipping",
-    fee: free ? 0 : rules.overnightShipFee,
+    method,
+    fee,
     shipDate: formatDay(shipDate),
     deliveryDate: formatDay(deliveryDate),
+    holiday: holiday ? { name: holiday.name, firstDay: holiday.firstDay, arrivesBefore: beforeHoliday(deliveryDate) } : undefined,
+    priority,
   };
 }
 

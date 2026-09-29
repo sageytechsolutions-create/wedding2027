@@ -15,12 +15,12 @@ export default async function AdminPage() {
       orderBy: { name: "asc" },
       include: {
         _count: { select: { products: true } },
-        vendorOrders: { where: { status: { not: "cancelled" } }, select: { subtotal: true, commission: true } },
+        vendorOrders: { where: { status: { not: "cancelled" }, order: { paymentStatus: "paid" } }, select: { subtotal: true, commission: true } },
       },
     }),
-    db.vendorOrder.findMany({ orderBy: { order: { createdAt: "desc" } }, take: 15, include: { order: true, vendor: true } }),
+    db.vendorOrder.findMany({ where: { order: { paymentStatus: "paid" } }, orderBy: { order: { createdAt: "desc" } }, take: 15, include: { order: true, vendor: true } }),
     db.vendorOrder.aggregate({
-      where: { status: { not: "cancelled" } },
+      where: { status: { not: "cancelled" }, order: { paymentStatus: "paid" } },
       _sum: { subtotal: true, shippingFee: true, commission: true, vendorPayout: true },
       _count: true,
     }),
@@ -63,6 +63,7 @@ export default async function AdminPage() {
                 <th className="px-4 py-3">Products</th>
                 <th className="px-4 py-3">Sales</th>
                 <th className="px-4 py-3">Commission</th>
+                <th className="px-4 py-3">Payouts</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -77,6 +78,7 @@ export default async function AdminPage() {
                   <td className="px-4 py-3">{v._count.products}</td>
                   <td className="px-4 py-3">{formatMoney(v.vendorOrders.reduce((s, o) => s + o.subtotal, 0))}</td>
                   <td className="px-4 py-3">{Math.round(v.commissionRate * 100)}%</td>
+                  <td className="px-4 py-3">{v.stripePayoutsEnabled ? "✓ Stripe" : v.stripeAccountId ? "Setup started" : "Not connected"}</td>
                   <td className="px-4 py-3 text-right">
                     <form action={toggleVendor}>
                       <input type="hidden" name="id" value={v.id} />

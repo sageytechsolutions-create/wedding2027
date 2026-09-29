@@ -26,7 +26,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </Link>
         <h1 className="mt-2 font-display text-4xl font-bold">{product.name}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <KosherBadges kosherType={product.kosherType} kosherForPassover={product.kosherForPassover} />
+          <KosherBadges kosherType={product.kosherType} kosherForPassover={product.kosherForPassover} labels={product.labels} />
           {vendor.certification && <span className="text-sm text-stone-600">Certified by {vendor.certification}</span>}
         </div>
         <p className="mt-3 text-2xl font-semibold">{formatMoney(product.price)}</p>
@@ -51,7 +51,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
         <p className="mt-6 text-sm text-stone-500">
           {product.perishable
-            ? "Perishable. Packed cold and shipped Monday–Thursday so it never sits in a warehouse over Shabbat."
+            ? "Perishable. Packed cold and shipped Monday–Thursday and never before Yom Tov, so it never sits in a warehouse over Shabbat or a holiday."
             : "Shelf-stable. Ships Monday–Friday."}
         </p>
       </div>

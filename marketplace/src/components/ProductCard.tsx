@@ -11,6 +11,7 @@ export interface ProductCardData {
   serves: string | null;
   kosherType: string;
   kosherForPassover: boolean;
+  labels: string;
   vendor: { name: string; city: string; state: string; accentColor: string };
 }
 
@@ -41,7 +42,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
         </p>
         <h3 className="mt-1 font-semibold leading-snug group-hover:text-brand">{product.name}</h3>
         <div className="mt-2">
-          <KosherBadges kosherType={product.kosherType} kosherForPassover={product.kosherForPassover} />
+          <KosherBadges kosherType={product.kosherType} kosherForPassover={product.kosherForPassover} labels={product.labels} />
         </div>
         <div className="mt-2 flex items-center justify-between text-sm">
           <span className="font-semibold">{formatMoney(product.price)}</span>

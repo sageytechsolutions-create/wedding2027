@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/StatusBadge";
-import { createProduct, toggleProduct, updateVendorOrder, updateVendorSettings } from "@/lib/actions";
+import { connectStripe, createProduct, refreshStripeStatus, toggleProduct, updateVendorOrder, updateVendorSettings } from "@/lib/actions";
 import { db } from "@/lib/db";
 import { formatDeliveryDate, methodLabel } from "@/lib/fulfillment";
 import { formatMoney } from "@/lib/money";
-import { KOSHER_TYPES, kosherLabels } from "@/lib/kosher";
+import { KOSHER_LABELS, KOSHER_TYPES, kosherLabels } from "@/lib/kosher";
+import { stripe } from "@/lib/stripe";
 import { VENDOR_ORDER_STATUSES, statusLabel } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
@@ -13,12 +14,19 @@ const field = "rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm";
 
 export default async function VendorDashboard({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const found = await db.vendor.findUnique({ where: { slug }, select: { id: true, stripeAccountId: true, stripePayoutsEnabled: true } });
+  if (!found) notFound();
+  // Coming back from Stripe onboarding: pick up the new status and pay out anything owed.
+  if (found.stripeAccountId && !found.stripePayoutsEnabled) await refreshStripeStatus(found.id);
+
   const vendor = await db.vendor.findUnique({
     where: { slug },
     include: {
       products: { orderBy: { createdAt: "desc" } },
       vendorOrders: {
-        orderBy: [{ shipDate: "asc" }],
+        // Unpaid checkouts never reach the vendor.
+        where: { order: { paymentStatus: "paid" } },
+        orderBy: [{ shipDate: "asc" }, { priority: "desc" }],
         include: { order: true, items: true },
       },
     },
@@ -62,6 +70,9 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
                 <div>
                   <span className="font-semibold">{vo.order.number}</span>{" "}
                   <StatusBadge status={vo.status} />
+                  {vo.priority && (
+                    <span className="ml-2 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">⚡ Priority before {vo.holidayName}</span>
+                  )}
                 </div>
                 <span className="text-sm text-stone-600">
                   {methodLabel(vo.method)} · {vo.method === "local_delivery" ? "deliver" : "ship"} by{" "}
@@ -139,9 +150,39 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="kosherForPassover" /> Kosher for Passover
             </label>
+            <fieldset className="flex flex-wrap gap-x-4 gap-y-1 text-sm sm:col-span-2">
+              <legend className="mb-1 text-stone-500">Hashgacha standards</legend>
+              {Object.entries(KOSHER_LABELS).map(([k, v]) => (
+                <label key={k} className="flex items-center gap-1.5">
+                  <input type="checkbox" name="labels" value={k} /> {v}
+                </label>
+              ))}
+            </fieldset>
             <button className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white sm:justify-self-end">Add product</button>
           </form>
         </details>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold">Getting paid</h2>
+        <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 text-sm">
+          {!stripe ? (
+            <p className="text-stone-500">Stripe isn&apos;t configured on this site yet (demo mode).</p>
+          ) : vendor.stripePayoutsEnabled ? (
+            <p className="text-emerald-700">✓ Payouts are on. Your share of each order is sent to your bank through Stripe as soon as the customer pays.</p>
+          ) : (
+            <form action={connectStripe} className="flex flex-wrap items-center justify-between gap-3">
+              <input type="hidden" name="id" value={vendor.id} />
+              <p className="text-stone-600">
+                {vendor.stripeAccountId ? "Finish setting up Stripe to receive payouts." : "Connect a bank account through Stripe to receive payouts."}
+                {" "}Payouts for orders you&apos;ve already received are sent once you finish.
+              </p>
+              <button className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white">
+                {vendor.stripeAccountId ? "Continue Stripe setup" : "Connect with Stripe"}
+              </button>
+            </form>
+          )}
+        </div>
       </section>
 
       <section>
@@ -160,6 +201,10 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
           <label className="text-sm">
             Overnight shipping fee ($)
             <input name="overnightShipFee" type="number" step="0.01" min="0" defaultValue={(vendor.overnightShipFee / 100).toFixed(2)} className={`${field} mt-1 w-full`} />
+          </label>
+          <label className="text-sm">
+            Priority holiday delivery fee ($)
+            <input name="priorityFee" type="number" step="0.01" min="0" defaultValue={(vendor.priorityFee / 100).toFixed(2)} className={`${field} mt-1 w-full`} />
           </label>
           <label className="text-sm">
             Free shipping on orders over ($, blank = never)

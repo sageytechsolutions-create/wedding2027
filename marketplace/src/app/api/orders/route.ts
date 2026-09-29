@@ -8,8 +8,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `${first.path.join(".")}: ${first.message}` }, { status: 400 });
   }
   try {
-    const order = await placeOrder(parsed.data);
-    return NextResponse.json({ number: order.number });
+    const { number, redirectUrl } = await placeOrder(parsed.data);
+    return NextResponse.json({ number, redirectUrl });
   } catch (e) {
     if (e instanceof CheckoutError) return NextResponse.json({ error: e.message }, { status: 409 });
     throw e;
