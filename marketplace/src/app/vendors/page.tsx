@@ -1,3 +1,4 @@
+import { vendorLocation } from "@/lib/money";
 import Link from "next/link";
 import { db } from "@/lib/db";
 
@@ -20,7 +21,7 @@ export default async function VendorsPage() {
           <Link key={v.id} href={`/vendors/${v.slug}`} className="rounded-2xl border border-stone-200 bg-white p-6 hover:shadow-md">
             <span className="flex h-16 w-16 items-center justify-center rounded-full text-4xl" style={{ background: `${v.accentColor}22` }}>{v.emoji}</span>
             <h2 className="mt-4 text-lg font-semibold">{v.name}</h2>
-            <p className="text-sm text-stone-500">{v.city}, {v.state} · {v._count.products} items{v.certification && ` · ${v.certification}`}</p>
+            <p className="text-sm text-stone-500">{[vendorLocation(v), `${v._count.products} items`, v.certification].filter(Boolean).join(" · ")}</p>
             <p className="mt-2 text-sm text-stone-700">{v.tagline}</p>
           </Link>
         ))}

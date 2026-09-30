@@ -22,15 +22,16 @@ model Vendor {
   certification String @default("")
   accentColor String @default("#f97316")
 
-  // Comma-separated 3-digit ZIP prefixes this vendor can hand-deliver to
-  // next day (e.g. "100,101,112" for Manhattan + Brooklyn). Empty = ship only.
-  localZipPrefixes  String @default("")
-  localDeliveryFee  Int    @default(999) // cents
+  // Whether the shared local courier picks up from this vendor. Local fees are platform-wide (src/lib/config.ts).
+  courierPickup     Boolean @default(false)
   shipsNationwide   Boolean @default(true)
   overnightShipFee  Int    @default(1999) // cents
-  freeShippingMin   Int?   // cents; order subtotal at which shipping is free
+  twoDayShipFee     Int?   @default(999)  // cents; null = no 2-day option. Shelf-stable orders only.
+  freeShippingMin   Int?   // cents; order subtotal at which delivery is free
   commissionRate    Float  @default(0.2) // platform take rate
-  priorityFee       Int    @default(1499) // cents; pre-Yom Tov priority delivery
+  // Pre-Yom Tov priority delivery, per shipping speed (cents).
+  priorityOvernightFee Int @default(1499)
+  priorityTwoDayFee    Int @default(999)
 
   // Stripe Connect (Express) account that receives this vendor's payouts.
   stripeAccountId      String?
@@ -98,7 +99,7 @@ model VendorOrder {
   order            Order     @relation(fields: [orderId], references: [id])
   vendorId         String
   vendor           Vendor    @relation(fields: [vendorId], references: [id])
-  method           String // local_delivery | overnight_shipping
+  method           String // local_delivery | overnight_shipping | two_day_shipping
   shipDate         DateTime // local delivery: the day it goes out
   deliveryDate     DateTime
   subtotal         Int

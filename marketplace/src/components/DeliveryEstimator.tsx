@@ -38,18 +38,20 @@ export function DeliveryEstimator({ productId }: { productId: string }) {
         </button>
       </form>
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      {q && (
-        <p className="mt-3 text-sm">
-          {q.available ? (
-            <>
-              <strong>{methodLabel(q.method)}</strong>. Arrives <strong>{formatDeliveryDate(q.deliveryDate)}</strong>
+      {q && !q.available && <p className="mt-3 text-sm text-red-600">{q.reason}</p>}
+      {q?.available && (
+        <ul className="mt-3 space-y-1 text-sm">
+          {q.options.map((o) => (
+            <li key={o.method}>
+              <strong>{methodLabel(o.method)}</strong>: arrives <strong>{formatDeliveryDate(o.deliveryDate)}</strong>
               {" · "}
-              {q.fee === 0 ? "Free" : formatMoney(q.fee)}
-            </>
-          ) : (
-            <span className="text-red-600">{q.reason}</span>
+              {o.fee === 0 ? "Free" : formatMoney(o.fee)}
+            </li>
+          ))}
+          {q.options.some((o) => o.priority) && (
+            <li className="text-amber-800">⚡ Priority delivery before {q.holiday?.name} available at checkout.</li>
           )}
-        </p>
+        </ul>
       )}
     </div>
   );

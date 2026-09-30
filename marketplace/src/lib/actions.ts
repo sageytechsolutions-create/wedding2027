@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "./db";
+import { isInCourierArea } from "./fulfillment";
 import { KOSHER_LABELS, KOSHER_TYPES } from "./kosher";
 import { sendPendingPayouts } from "./orders";
 import { siteUrl, stripe } from "./stripe";
@@ -85,27 +86,28 @@ export async function updateVendorSettings(formData: FormData) {
     .object({
       id: z.string(),
       slug: z.string(),
-      localZipPrefixes: z.string().max(500),
-      localDeliveryFee: dollarsToCents,
       overnightShipFee: dollarsToCents,
-      priorityFee: dollarsToCents,
+      twoDayShipFee: z.string().optional(),
+      priorityOvernightFee: dollarsToCents,
+      priorityTwoDayFee: dollarsToCents,
       freeShippingMin: z.string().optional(),
       shipsNationwide: z.string().optional(),
     })
     .parse(Object.fromEntries(formData));
-  const freeMin = data.freeShippingMin?.trim() ? Math.round(Number(data.freeShippingMin) * 100) : null;
+  // Blank = none (no free-shipping threshold / no 2-day option).
+  const optionalCents = (v?: string) => {
+    const cents = v?.trim() ? Math.round(Number(v) * 100) : null;
+    return cents != null && Number.isFinite(cents) && cents >= 0 ? cents : null;
+  };
   await db.vendor.update({
     where: { id: data.id },
     data: {
-      localZipPrefixes: data.localZipPrefixes
-        .split(/[\s,]+/)
-        .filter((p) => /^\d{3}$/.test(p))
-        .join(","),
-      localDeliveryFee: data.localDeliveryFee,
       overnightShipFee: data.overnightShipFee,
-      freeShippingMin: freeMin != null && Number.isFinite(freeMin) ? freeMin : null,
+      twoDayShipFee: optionalCents(data.twoDayShipFee),
+      freeShippingMin: optionalCents(data.freeShippingMin),
       shipsNationwide: data.shipsNationwide === "on",
-      priorityFee: data.priorityFee,
+      priorityOvernightFee: data.priorityOvernightFee,
+      priorityTwoDayFee: data.priorityTwoDayFee,
     },
   });
   revalidatePath(`/vendor/${data.slug}`);
@@ -139,11 +141,18 @@ export async function createVendor(formData: FormData) {
       emoji: data.emoji || "🍽️",
       certification: data.certification,
       commissionRate: data.commissionPercent / 100,
-      // Default the delivery area to the vendor's own ZIP3; they can widen it in the portal.
-      localZipPrefixes: data.originZip.slice(0, 3),
+      // The shared courier picks up from vendors inside its area.
+      courierPickup: isInCourierArea(data.originZip),
     },
   });
   redirect(`/vendor/${slug}`);
+}
+
+export async function toggleCourierPickup(formData: FormData) {
+  const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
+  const vendor = await db.vendor.findUniqueOrThrow({ where: { id } });
+  await db.vendor.update({ where: { id }, data: { courierPickup: !vendor.courierPickup } });
+  revalidatePath("/admin");
 }
 
 export async function toggleVendor(formData: FormData) {

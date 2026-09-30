@@ -1,3 +1,4 @@
+import { vendorLocation } from "@/lib/money";
 import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
 import { db } from "@/lib/db";
@@ -56,7 +57,7 @@ export default async function HomePage() {
               <span className="flex h-14 w-14 items-center justify-center rounded-full text-3xl" style={{ background: `${v.accentColor}22` }}>{v.emoji}</span>
               <div>
                 <h3 className="font-semibold">{v.name}</h3>
-                <p className="text-sm text-stone-500">{v.city}, {v.state}</p>
+                <p className="text-sm text-stone-500">{vendorLocation(v)}</p>
               </div>
             </Link>
           ))}

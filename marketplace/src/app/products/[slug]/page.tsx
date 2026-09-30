@@ -5,7 +5,7 @@ import { DeliveryEstimator } from "@/components/DeliveryEstimator";
 import { KosherBadges } from "@/components/KosherBadges";
 import { ProductImage } from "@/components/ProductCard";
 import { db } from "@/lib/db";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, vendorLocation } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </div>
       <div>
         <Link href={`/vendors/${vendor.slug}`} className="text-sm font-medium uppercase tracking-wide text-brand">
-          {vendor.emoji} {vendor.name} · {vendor.city}, {vendor.state}
+          {vendor.emoji} {[vendor.name, vendorLocation(vendor)].filter(Boolean).join(" · ")}
         </Link>
         <h1 className="mt-2 font-display text-4xl font-bold">{product.name}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-2">

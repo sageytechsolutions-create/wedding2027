@@ -1,5 +1,6 @@
-import { HebrewCalendar, flags } from "@hebcal/core";
+import { HebrewCalendar, Location, Zmanim, flags } from "@hebcal/core";
 import { site } from "./config";
+import { addDays, formatDay, localNow } from "./time";
 
 // Shabbat and Yom Tov (diaspora, two-day chagim) awareness.
 // Calendar days are UTC-midnight Dates, matching fulfillment.ts.
@@ -45,8 +46,7 @@ function yomTovDays(year: number): Map<string, string> {
   return days;
 }
 
-const key = (day: Date) => day.toISOString().slice(0, 10);
-const addDays = (day: Date, n: number) => new Date(day.getTime() + n * 86_400_000);
+const key = formatDay;
 
 export function yomTovName(day: Date): string | null {
   return yomTovDays(day.getUTCFullYear()).get(key(day)) ?? null;
@@ -93,46 +93,56 @@ export type StoreStatus =
   | { open: true; closesToday: { at: string; reason: string } | null }
   | { open: false; reason: string; reopens: string };
 
-function hourLabel(hour: number): string {
-  const h = hour % 12 || 12;
-  return `${h}:00 ${hour < 12 ? "AM" : "PM"} ET`;
+const sunsetLocation = Location.lookup(site.sunsetLocation);
+if (!sunsetLocation) throw new Error(`Unknown sunset location: ${site.sunsetLocation}`);
+
+// When the site reopens after the rest day `day` ends: sunset plus a margin, rounded up to the minute.
+export function reopenTime(day: Date): Date {
+  const sunset = new Zmanim(sunsetLocation!, new Date(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()), false).sunset();
+  const reopen = sunset.getTime() + site.reopenMinutesAfterSunset * 60_000;
+  return new Date(Math.ceil(reopen / 60_000) * 60_000);
+}
+
+function timeLabel(at: Date): string {
+  return `${at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: site.timeZone })} ET`;
 }
 
 function dayLabel(day: Date): string {
   return day.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
 }
 
-// The store closes at `erevCloseHour` before Shabbat/Yom Tov and reopens at
-// `reopenHour` on the last rest day (after havdalah).
-export function storeStatus(today: Date, hour: number): StoreStatus {
+function lastRestDay(from: Date): Date {
+  let last = from;
+  while (isRestDay(addDays(last, 1))) last = addDays(last, 1);
+  return last;
+}
+
+// The store closes at `erevCloseHour` before Shabbat/Yom Tov and reopens
+// `reopenMinutesAfterSunset` after sunset on the last rest day.
+export function storeStatus(now: Date): StoreStatus {
+  const { day: today, hour } = localNow(now);
   const tomorrow = addDays(today, 1);
 
   if (isRestDay(today)) {
-    // Find the start and end of this run of rest days.
     let first = today;
     while (isRestDay(addDays(first, -1))) first = addDays(first, -1);
-    let last = today;
-    while (isRestDay(addDays(last, 1))) last = addDays(last, 1);
-    const reopensToday = key(last) === key(today);
-    if (!(reopensToday && hour >= site.reopenHour)) {
-      return {
-        open: false,
-        reason: restPeriodName(first),
-        reopens: `${reopensToday ? "Tonight" : dayLabel(last) + " night"} at ${hourLabel(site.reopenHour)}`,
-      };
+    const last = lastRestDay(today);
+    const reopens = reopenTime(last);
+    if (now < reopens) {
+      const when = key(last) === key(today) ? "tonight" : `${dayLabel(last)}`;
+      return { open: false, reason: restPeriodName(first), reopens: `${when} at ${timeLabel(reopens)}` };
     }
-    // Motzei Shabbat/Yom Tov: open again, unless another rest period starts tomorrow (can't happen, but be safe).
-    return { open: true, closesToday: null };
+    return { open: true, closesToday: null }; // Motzei Shabbat / Yom Tov
   }
 
   if (isRestDay(tomorrow)) {
     const reason = restPeriodName(tomorrow);
     if (hour >= site.erevCloseHour) {
-      let last = tomorrow;
-      while (isRestDay(addDays(last, 1))) last = addDays(last, 1);
-      return { open: false, reason, reopens: `${dayLabel(last)} night at ${hourLabel(site.reopenHour)}` };
+      const last = lastRestDay(tomorrow);
+      return { open: false, reason, reopens: `${dayLabel(last)} at ${timeLabel(reopenTime(last))}` };
     }
-    return { open: true, closesToday: { at: hourLabel(site.erevCloseHour), reason } };
+    const closeAt = site.erevCloseHour % 12 || 12;
+    return { open: true, closesToday: { at: `${closeAt}:00 ${site.erevCloseHour < 12 ? "AM" : "PM"} ET`, reason } };
   }
 
   return { open: true, closesToday: null };

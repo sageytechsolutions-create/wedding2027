@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCart } from "@/components/cart";
-import { formatDeliveryDate, methodLabel } from "@/lib/fulfillment";
+import { formatDeliveryDate, methodLabel, type DeliveryOption } from "@/lib/fulfillment";
 import { formatMoney } from "@/lib/money";
 import { fetchQuote, type GroupQuote } from "@/lib/quote-client";
 
@@ -13,7 +13,8 @@ const input = "w-full rounded-lg border border-stone-300 bg-white px-3 py-2";
 
 export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: boolean; cancelled: boolean }) {
   const { lines, ready, subtotal } = useCart();
-  const [priority, setPriority] = useState<string[]>([]);
+  // Per vendor: chosen delivery method and whether priority holiday delivery is on.
+  const [choices, setChoices] = useState<Record<string, { method?: string; priority: boolean }>>({});
   const [zip, setZip] = useState("");
   const [quotes, setQuotes] = useState<GroupQuote[] | null>(null);
   const [error, setError] = useState("");
@@ -48,13 +49,20 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
   }
 
   const blocked = quotes?.filter((g) => !g.quote.available) ?? [];
-  // Only keep priority picks the current quote still offers.
-  const priorityIds = priority.filter((id) => quotes?.some((g) => g.vendorId === id && g.quote.available && g.quote.priority));
+  // The option in effect for a vendor: their pick if the current quote still offers it, else the default.
+  const selected = (g: GroupQuote): { option: DeliveryOption; priority: boolean } | null => {
+    if (!g.quote.available) return null;
+    const choice = choices[g.vendorId];
+    const option = g.quote.options.find((o) => o.method === choice?.method) ?? g.quote.options[0];
+    return { option, priority: !!choice?.priority && !!option.priority };
+  };
   const shipping =
     quotes?.reduce((s, g) => {
-      if (!g.quote.available) return s;
-      return s + g.quote.fee + (priorityIds.includes(g.vendorId) ? (g.quote.priority?.fee ?? 0) : 0);
+      const sel = selected(g);
+      return sel ? s + sel.option.fee + (sel.priority ? sel.option.priority!.fee : 0) : s;
     }, 0) ?? null;
+  const choose = (vendorId: string, change: { method?: string; priority?: boolean }) =>
+    setChoices((prev) => ({ ...prev, [vendorId]: { method: prev[vendorId]?.method, priority: prev[vendorId]?.priority ?? false, ...change } }));
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -77,7 +85,10 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
           zip,
           giftMessage: optional(form.giftMessage),
           items,
-          priorityVendorIds: priorityIds,
+          selections: (quotes ?? []).flatMap((g) => {
+            const sel = selected(g);
+            return sel ? [{ vendorId: g.vendorId, method: sel.option.method, priority: sel.priority }] : [];
+          }),
         }),
       });
       const data = await res.json();
@@ -146,7 +157,9 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
       <aside className="h-fit space-y-4 rounded-2xl border border-stone-200 bg-white p-6 lg:sticky lg:top-24">
         <h2 className="text-lg font-semibold">Order summary</h2>
         {[...Map.groupBy(lines, (l) => l.vendorId).entries()].map(([vendorId, vendorLines]) => {
-          const q = quotes?.find((g) => g.vendorId === vendorId)?.quote;
+          const group = quotes?.find((g) => g.vendorId === vendorId);
+          const q = group?.quote;
+          const sel = group ? selected(group) : null;
           return (
             <div key={vendorId} className="border-b border-stone-100 pb-3 text-sm">
               <p className="font-medium">{vendorLines[0].vendorName}</p>
@@ -156,41 +169,45 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
                   <span>{formatMoney(l.price * l.quantity)}</span>
                 </div>
               ))}
-              {q &&
-                (q.available ? (
-                  <>
-                    <p className="mt-1 text-emerald-700">
-                      {methodLabel(q.method)} · arrives{" "}
-                      {formatDeliveryDate(priorityIds.includes(vendorId) && q.priority ? q.priority.deliveryDate : q.deliveryDate)} ·{" "}
-                      {q.fee === 0 ? "Free" : formatMoney(q.fee)}
-                    </p>
-                    {q.priority ? (
-                      <label className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 p-2 text-amber-900">
+              {q && !q.available && <p className="mt-1 text-red-600">{q.reason}</p>}
+              {q?.available && sel && (
+                <>
+                  <div className="mt-2 space-y-1">
+                    {q.options.map((o) => (
+                      <label key={o.method} className="flex items-start gap-2 text-emerald-800">
                         <input
-                          type="checkbox"
+                          type="radio"
                           className="mt-1"
-                          checked={priorityIds.includes(vendorId)}
-                          onChange={(e) =>
-                            setPriority((prev) => (e.target.checked ? [...prev, vendorId] : prev.filter((id) => id !== vendorId)))
-                          }
+                          name={`delivery-${vendorId}`}
+                          checked={sel.option.method === o.method}
+                          onChange={() => choose(vendorId, { method: o.method })}
                         />
                         <span>
-                          <strong>Priority delivery before {q.priority.holidayName}</strong> +{formatMoney(q.priority.fee)}
-                          <br />
-                          Packed first and guaranteed by {formatDeliveryDate(q.priority.deliveryDate)}
-                          {q.priority.deliveryDate < q.deliveryDate && " (same day)"}.
+                          {methodLabel(o.method)} · arrives {formatDeliveryDate(o.deliveryDate)} · {o.fee === 0 ? "Free" : formatMoney(o.fee)}
                         </span>
                       </label>
-                    ) : (
-                      q.holiday &&
-                      !q.holiday.arrivesBefore && (
-                        <p className="mt-1 text-amber-700">Arrives after {q.holiday.name} begins.</p>
-                      )
-                    )}
-                  </>
-                ) : (
-                  <p className="mt-1 text-red-600">{q.reason}</p>
-                ))}
+                    ))}
+                  </div>
+                  {sel.option.priority ? (
+                    <label className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 p-2 text-amber-900">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={sel.priority}
+                        onChange={(e) => choose(vendorId, { method: sel.option.method, priority: e.target.checked })}
+                      />
+                      <span>
+                        <strong>Priority delivery before {q.holiday?.name}</strong> +{formatMoney(sel.option.priority.fee)}
+                        <br />
+                        Packed first and guaranteed by {formatDeliveryDate(sel.option.priority.deliveryDate)}
+                        {sel.option.priority.deliveryDate < sel.option.deliveryDate && " (same day)"}.
+                      </span>
+                    </label>
+                  ) : (
+                    q.holiday && <p className="mt-1 text-amber-700">Arrives after {q.holiday.name} begins.</p>
+                  )}
+                </>
+              )}
             </div>
           );
         })}

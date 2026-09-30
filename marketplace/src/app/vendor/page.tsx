@@ -1,3 +1,4 @@
+import { vendorLocation } from "@/lib/money";
 import Link from "next/link";
 import { db } from "@/lib/db";
 
@@ -18,7 +19,7 @@ export default async function VendorPortalIndex() {
             <Link href={`/vendor/${v.slug}`} className="flex items-center gap-3 px-5 py-4 hover:bg-stone-50">
               <span className="text-2xl">{v.emoji}</span>
               <span className="flex-1 font-medium">{v.name}</span>
-              <span className="text-sm text-stone-500">{v.city}, {v.state}</span>
+              <span className="text-sm text-stone-500">{vendorLocation(v)}</span>
             </Link>
           </li>
         ))}

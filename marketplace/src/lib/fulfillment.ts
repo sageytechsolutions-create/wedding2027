@@ -1,42 +1,52 @@
-import { site } from "./config";
+import { localDelivery, site } from "./config";
 import { isRestDay, upcomingHoliday } from "./jewish-calendar";
+import { addDays, formatDay, localNow } from "./time";
 
-// Decides how a vendor's items reach a customer and when they arrive.
+export { formatDay, localNow };
+
+// Decides how a vendor's items can reach a customer and when they arrive.
 //
-// - Local delivery: the customer's ZIP is in the vendor's delivery area.
-//   The vendor drives it over the next day (never on Shabbat or Yom Tov).
+// - Local delivery: the customer's ZIP is in the shared courier's area and the
+//   courier picks up from this vendor. Delivered the next day (never on
+//   Shabbat or Yom Tov).
 // - Overnight shipping: everyone else in the US. Perishable boxes only ship
 //   Mon–Thu, and never the day before Yom Tov, so they never sit in a
 //   carrier warehouse.
+// - 2-day shipping: a cheaper option for shelf-stable orders.
 
-export type FulfillmentMethod = "local_delivery" | "overnight_shipping";
+export type FulfillmentMethod = "local_delivery" | "overnight_shipping" | "two_day_shipping";
 
 export interface VendorShippingRules {
-  localZipPrefixes: string; // comma-separated 3-digit prefixes
-  localDeliveryFee: number;
+  courierPickup: boolean;
   shipsNationwide: boolean;
   overnightShipFee: number;
+  twoDayShipFee: number | null; // null = 2-day shipping not offered
   freeShippingMin: number | null;
-  priorityFee: number;
+  priorityOvernightFee: number;
+  priorityTwoDayFee: number;
 }
 
 // Offered in the two weeks before Yom Tov: guaranteed to arrive before the holiday.
 export interface PriorityOption {
   fee: number;
-  holidayName: string;
   shipDate: string;
   deliveryDate: string;
+}
+
+export interface DeliveryOption {
+  method: FulfillmentMethod;
+  fee: number;
+  shipDate: string; // YYYY-MM-DD; for local delivery, the day it goes out
+  deliveryDate: string; // YYYY-MM-DD
+  priority?: PriorityOption;
 }
 
 export type FulfillmentQuote =
   | {
       available: true;
-      method: FulfillmentMethod;
-      fee: number;
-      shipDate: string; // YYYY-MM-DD
-      deliveryDate: string; // YYYY-MM-DD
-      holiday?: { name: string; firstDay: string; arrivesBefore: boolean };
-      priority?: PriorityOption;
+      // Fastest first; the first one is the default choice.
+      options: DeliveryOption[];
+      holiday?: { name: string; firstDay: string };
     }
   | { available: false; reason: string };
 
@@ -51,49 +61,14 @@ export function parseZipPrefixes(prefixes: string): string[] {
     .filter((p) => /^\d{3}$/.test(p));
 }
 
-export function isLocalZip(rules: Pick<VendorShippingRules, "localZipPrefixes">, zip: string): boolean {
-  return parseZipPrefixes(rules.localZipPrefixes).includes(zip.slice(0, 3));
-}
-
-// Calendar days are represented as UTC-midnight Dates so arithmetic ignores DST.
-function toDay(y: number, m: number, d: number): Date {
-  return new Date(Date.UTC(y, m - 1, d));
-}
-
-function addDays(day: Date, n: number): Date {
-  const next = new Date(day);
-  next.setUTCDate(next.getUTCDate() + n);
-  return next;
-}
-
-export function formatDay(day: Date): string {
-  return day.toISOString().slice(0, 10);
-}
-
-// The calendar day and hour "now" in the platform's time zone.
-export function localNow(now: Date, timeZone = site.timeZone): { day: Date; hour: number } {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      hourCycle: "h23",
-    })
-      .formatToParts(now)
-      .map((p) => [p.type, p.value]),
-  );
-  return {
-    day: toDay(Number(parts.year), Number(parts.month), Number(parts.day)),
-    hour: Number(parts.hour),
-  };
+export function isInCourierArea(zip: string): boolean {
+  return parseZipPrefixes(localDelivery.zipPrefixes).includes(zip.slice(0, 3));
 }
 
 // 0 = Sunday … 6 = Saturday. Rest days (Shabbat and Yom Tov) are excluded on top of these.
 const PERISHABLE_SHIP_DAYS = new Set([1, 2, 3, 4]);
 const STANDARD_SHIP_DAYS = new Set([1, 2, 3, 4, 5]);
-const CARRIER_DELIVERY_DAYS = new Set([1, 2, 3, 4, 5]);
+const isBusinessDay = (day: Date) => day.getUTCDay() >= 1 && day.getUTCDay() <= 5;
 
 function firstDay(from: Date, ok: (day: Date) => boolean): Date {
   let day = from;
@@ -102,7 +77,31 @@ function firstDay(from: Date, ok: (day: Date) => boolean): Date {
 }
 
 const workDay = (day: Date) => !isRestDay(day);
-const carrierDeliveryDay = (day: Date) => CARRIER_DELIVERY_DAYS.has(day.getUTCDay()) && workDay(day);
+
+// Carriers deliver on business days, including Yom Tov, so the arrival day is
+// simply the Nth business day after shipping.
+function carrierArrival(shipDate: Date, transitDays: number): Date {
+  let day = shipDate;
+  for (let i = 0; i < transitDays; i++) day = firstDay(addDays(day, 1), isBusinessDay);
+  return day;
+}
+
+function shippingOption(
+  method: FulfillmentMethod,
+  transitDays: number,
+  fee: number,
+  prepDay: Date,
+  perishable: boolean,
+): DeliveryOption {
+  const shipDays = perishable ? PERISHABLE_SHIP_DAYS : STANDARD_SHIP_DAYS;
+  // Never ship so it lands on Shabbat/Yom Tov. Perishables must also arrive the very next calendar day.
+  const shipDate = firstDay(prepDay, (d) => {
+    if (!shipDays.has(d.getUTCDay()) || !workDay(d)) return false;
+    const arrival = carrierArrival(d, transitDays);
+    return workDay(arrival) && (!perishable || formatDay(arrival) === formatDay(addDays(d, transitDays)));
+  });
+  return { method, fee, shipDate: formatDay(shipDate), deliveryDate: formatDay(carrierArrival(shipDate, transitDays)) };
+}
 
 export function quoteFulfillment(
   rules: VendorShippingRules,
@@ -118,59 +117,48 @@ export function quoteFulfillment(
   const prepDay = firstDay(hour < site.orderCutoffHour ? today : addDays(today, 1), workDay);
   const free = rules.freeShippingMin != null && subtotal >= rules.freeShippingMin;
   const holiday = upcomingHoliday(today);
-  const beforeHoliday = (day: Date) => holiday != null && formatDay(day) < holiday.firstDay;
+  const beforeHoliday = (day: string) => holiday != null && day < holiday.firstDay;
 
-  let method: FulfillmentMethod;
-  let fee: number;
-  let shipDate: Date;
-  let deliveryDate: Date;
-  let priority: PriorityOption | undefined;
-
-  if (isLocalZip(rules, zip)) {
-    method = "local_delivery";
-    fee = free ? 0 : rules.localDeliveryFee;
-    // The vendor drives it out the same day it's delivered.
-    deliveryDate = firstDay(addDays(prepDay, 1), workDay);
-    shipDate = deliveryDate;
-    if (holiday) {
-      // Priority: same-day delivery when the order is in before the cutoff.
-      const rush = formatDay(prepDay) === formatDay(today) ? today : deliveryDate;
-      if (beforeHoliday(rush)) {
-        priority = { fee: rules.priorityFee, holidayName: holiday.name, shipDate: formatDay(rush), deliveryDate: formatDay(rush) };
-      }
+  const options: DeliveryOption[] = [];
+  if (rules.courierPickup && isInCourierArea(zip)) {
+    const deliveryDate = formatDay(firstDay(addDays(prepDay, 1), workDay));
+    const option: DeliveryOption = {
+      method: "local_delivery",
+      fee: free ? 0 : localDelivery.fee,
+      shipDate: deliveryDate,
+      deliveryDate,
+    };
+    // Priority: same-day delivery when the order is in before the cutoff.
+    const rush = formatDay(prepDay) === formatDay(today) ? formatDay(today) : deliveryDate;
+    if (beforeHoliday(rush)) option.priority = { fee: localDelivery.priorityFee, shipDate: rush, deliveryDate: rush };
+    options.push(option);
+  } else if (rules.shipsNationwide) {
+    const overnight = shippingOption("overnight_shipping", 1, free ? 0 : rules.overnightShipFee, prepDay, perishable);
+    options.push({ ...overnight, ...(beforeHoliday(overnight.deliveryDate) && { priority: { fee: rules.priorityOvernightFee, shipDate: overnight.shipDate, deliveryDate: overnight.deliveryDate } }) });
+    if (rules.twoDayShipFee != null && !perishable) {
+      const twoDay = shippingOption("two_day_shipping", 2, free ? 0 : rules.twoDayShipFee, prepDay, perishable);
+      options.push({ ...twoDay, ...(beforeHoliday(twoDay.deliveryDate) && { priority: { fee: rules.priorityTwoDayFee, shipDate: twoDay.shipDate, deliveryDate: twoDay.deliveryDate } }) });
     }
   } else {
-    if (!rules.shipsNationwide) {
-      return { available: false, reason: "This vendor only delivers locally and doesn't reach your ZIP yet." };
-    }
-    method = "overnight_shipping";
-    fee = free ? 0 : rules.overnightShipFee;
-    const shipDays = perishable ? PERISHABLE_SHIP_DAYS : STANDARD_SHIP_DAYS;
-    // Perishables must arrive the very next day, so the day after shipping has to be a delivery day too.
-    shipDate = firstDay(
-      prepDay,
-      (d) => shipDays.has(d.getUTCDay()) && workDay(d) && (!perishable || carrierDeliveryDay(addDays(d, 1))),
-    );
-    deliveryDate = firstDay(addDays(shipDate, 1), carrierDeliveryDay);
-    if (holiday && beforeHoliday(deliveryDate)) {
-      // Priority: packed first and guaranteed to arrive before Yom Tov.
-      priority = { fee: rules.priorityFee, holidayName: holiday.name, shipDate: formatDay(shipDate), deliveryDate: formatDay(deliveryDate) };
-    }
+    return { available: false, reason: "This vendor only delivers locally and doesn't reach your ZIP yet." };
   }
 
   return {
     available: true,
-    method,
-    fee,
-    shipDate: formatDay(shipDate),
-    deliveryDate: formatDay(deliveryDate),
-    holiday: holiday ? { name: holiday.name, firstDay: holiday.firstDay, arrivesBefore: beforeHoliday(deliveryDate) } : undefined,
-    priority,
+    options,
+    holiday: holiday ? { name: holiday.name, firstDay: holiday.firstDay } : undefined,
   };
 }
 
 export function methodLabel(method: string): string {
-  return method === "local_delivery" ? "Local next-day delivery" : "Overnight shipping";
+  switch (method) {
+    case "local_delivery":
+      return "Local next-day delivery";
+    case "two_day_shipping":
+      return "2-day shipping";
+    default:
+      return "Overnight shipping";
+  }
 }
 
 export function formatDeliveryDate(date: string | Date): string {

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/StatusBadge";
-import { createVendor, toggleVendor } from "@/lib/actions";
+import { createVendor, toggleCourierPickup, toggleVendor } from "@/lib/actions";
 import { db } from "@/lib/db";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, vendorLocation } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -28,7 +28,8 @@ export default async function AdminPage() {
 
   const stats = [
     ["Gross merchandise sales", formatMoney(totals._sum.subtotal ?? 0)],
-    ["Platform revenue (commission)", formatMoney(totals._sum.commission ?? 0)],
+    // Commission plus local courier fees (everything customers paid that isn't owed to vendors).
+    ["Platform revenue", formatMoney((totals._sum.subtotal ?? 0) + (totals._sum.shippingFee ?? 0) - (totals._sum.vendorPayout ?? 0))],
     ["Owed to vendors", formatMoney(totals._sum.vendorPayout ?? 0)],
     ["Vendor shipments", String(totals._count)],
   ];
@@ -64,6 +65,7 @@ export default async function AdminPage() {
                 <th className="px-4 py-3">Sales</th>
                 <th className="px-4 py-3">Commission</th>
                 <th className="px-4 py-3">Payouts</th>
+                <th className="px-4 py-3">NYC courier</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -73,12 +75,18 @@ export default async function AdminPage() {
                   <td className="px-4 py-3 font-medium">
                     <Link href={`/vendor/${v.slug}`} className="hover:text-brand">{v.emoji} {v.name}</Link>
                   </td>
-                  <td className="px-4 py-3">{v.city}, {v.state}</td>
-                  <td className="px-4 py-3">{v.certification || "—"}</td>
+                  <td className="px-4 py-3">{vendorLocation(v) || <span className="text-amber-700">Missing</span>}</td>
+                  <td className="px-4 py-3">{v.certification || <span className="text-amber-700">Missing</span>}</td>
                   <td className="px-4 py-3">{v._count.products}</td>
                   <td className="px-4 py-3">{formatMoney(v.vendorOrders.reduce((s, o) => s + o.subtotal, 0))}</td>
                   <td className="px-4 py-3">{Math.round(v.commissionRate * 100)}%</td>
                   <td className="px-4 py-3">{v.stripePayoutsEnabled ? "✓ Stripe" : v.stripeAccountId ? "Setup started" : "Not connected"}</td>
+                  <td className="px-4 py-3">
+                    <form action={toggleCourierPickup}>
+                      <input type="hidden" name="id" value={v.id} />
+                      <button className="text-brand">{v.courierPickup ? "✓ Picks up" : "Off"}</button>
+                    </form>
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <form action={toggleVendor}>
                       <input type="hidden" name="id" value={v.id} />

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { db } from "./db";
 import { currentStoreStatus } from "./store-hours";
 import { siteUrl, stripe } from "./stripe";
-import { quoteFulfillment, type FulfillmentQuote } from "./fulfillment";
+import { methodLabel, quoteFulfillment, type FulfillmentQuote } from "./fulfillment";
 
 export const cartLineSchema = z.object({
   productId: z.string().min(1),
@@ -20,8 +20,18 @@ export const checkoutSchema = z.object({
   zip: z.string().regex(/^\d{5}$/, "ZIP must be 5 digits"),
   giftMessage: z.string().max(300).optional(),
   items: z.array(cartLineSchema).min(1).max(50),
-  // Vendors whose part of the order should use pre-Yom Tov priority delivery.
-  priorityVendorIds: z.array(z.string()).max(50).default([]),
+  // The customer's delivery choice for each vendor. Vendors left out get their default (fastest) option.
+  selections: z
+    .array(
+      z.object({
+        vendorId: z.string(),
+        method: z.enum(["local_delivery", "overnight_shipping", "two_day_shipping"]),
+        // Pre-Yom Tov priority delivery.
+        priority: z.boolean().default(false),
+      }),
+    )
+    .max(50)
+    .default([]),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
@@ -96,29 +106,32 @@ export async function placeOrder(input: CheckoutInput): Promise<{ number: string
 
   const plans = groups.map((g) => {
     if (!g.quote.available) throw new CheckoutError(`${g.vendorName}: ${g.quote.reason}`);
-    const q = g.quote;
-    const wantsPriority = input.priorityVendorIds.includes(g.vendorId);
-    if (wantsPriority && !q.priority) {
+    const selection = input.selections.find((s) => s.vendorId === g.vendorId);
+    const option = selection ? g.quote.options.find((o) => o.method === selection.method) : g.quote.options[0];
+    if (!option) {
+      throw new CheckoutError(`${g.vendorName}: ${methodLabel(selection!.method)} isn't available for this order. Please review your order.`);
+    }
+    if (selection?.priority && !option.priority) {
       throw new CheckoutError(`${g.vendorName}: priority holiday delivery is no longer available. Please review your order.`);
     }
-    const p = wantsPriority ? q.priority! : null;
-    const shippingFee = q.fee + (p?.fee ?? 0);
+    const p = selection?.priority ? option.priority! : null;
+    const shippingFee = option.fee + (p?.fee ?? 0);
     const commission = Math.round(g.subtotal * g.commissionRate);
     return {
       group: g,
       shippingFee,
       data: {
         vendorId: g.vendorId,
-        method: q.method,
-        shipDate: new Date(`${p?.shipDate ?? q.shipDate}T00:00:00Z`),
-        deliveryDate: new Date(`${p?.deliveryDate ?? q.deliveryDate}T00:00:00Z`),
+        method: option.method,
+        shipDate: new Date(`${p?.shipDate ?? option.shipDate}T00:00:00Z`),
+        deliveryDate: new Date(`${p?.deliveryDate ?? option.deliveryDate}T00:00:00Z`),
         priority: p != null,
-        holidayName: p?.holidayName ?? null,
+        holidayName: p ? (g.quote.holiday?.name ?? null) : null,
         subtotal: g.subtotal,
         shippingFee,
         commission,
-        // Vendor keeps shipping and priority fees to cover packaging, drivers and carriers.
-        vendorPayout: g.subtotal - commission + shippingFee,
+        // Vendors keep carrier shipping fees; local delivery fees pay the shared courier, so the platform keeps them.
+        vendorPayout: g.subtotal - commission + (option.method === "local_delivery" ? 0 : shippingFee),
         items: { create: g.lines },
       },
     };
@@ -126,7 +139,7 @@ export async function placeOrder(input: CheckoutInput): Promise<{ number: string
 
   const subtotal = plans.reduce((s, p) => s + p.group.subtotal, 0);
   const shippingTotal = plans.reduce((s, p) => s + p.shippingFee, 0);
-  const { items: _items, priorityVendorIds: _priority, ...customer } = input;
+  const { items: _items, selections: _selections, ...customer } = input;
 
   const order = await db.order.create({
     data: {
@@ -153,7 +166,7 @@ export async function placeOrder(input: CheckoutInput): Promise<{ number: string
           price_data: {
             currency: "usd",
             unit_amount: p.shippingFee,
-            product_data: { name: `${p.data.priority ? "Priority holiday delivery" : "Delivery"}: ${p.group.vendorName}` },
+            product_data: { name: `${p.data.priority ? "Priority " : ""}${methodLabel(p.data.method)}: ${p.group.vendorName}` },
           },
         }]
       : []),

@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/ProductCard";
 import { db } from "@/lib/db";
-import { formatMoney } from "@/lib/money";
-import { parseZipPrefixes } from "@/lib/fulfillment";
+import { formatMoney, vendorLocation } from "@/lib/money";
+import { localDelivery } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,6 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
   if (!vendor || !vendor.active) notFound();
 
   const cardVendor = { name: vendor.name, city: vendor.city, state: vendor.state, accentColor: vendor.accentColor };
-  const hasLocal = parseZipPrefixes(vendor.localZipPrefixes).length > 0;
 
   return (
     <div>
@@ -23,8 +22,8 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
         <div className="text-6xl">{vendor.emoji}</div>
         <h1 className="mt-4 font-display text-4xl font-bold">{vendor.name}</h1>
         <p className="mt-1 text-stone-600">
-          {vendor.city}, {vendor.state}
-          {vendor.certification && <> · Kosher certified by <strong>{vendor.certification}</strong></>}
+          {vendorLocation(vendor)}
+          {vendor.certification && <>{vendorLocation(vendor) && " · "}Kosher certified by <strong>{vendor.certification}</strong></>}
         </p>
         <p className="mt-4 max-w-2xl text-lg">{vendor.tagline}</p>
         <p className="mt-3 max-w-2xl text-stone-700">{vendor.story}</p>
@@ -32,8 +31,11 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
           {vendor.shipsNationwide && (
             <span className="rounded-full bg-white px-3 py-1">📦 Overnight shipping {formatMoney(vendor.overnightShipFee)}</span>
           )}
-          {hasLocal && (
-            <span className="rounded-full bg-white px-3 py-1">🚚 Local next-day delivery {formatMoney(vendor.localDeliveryFee)}</span>
+          {vendor.shipsNationwide && vendor.twoDayShipFee != null && (
+            <span className="rounded-full bg-white px-3 py-1">📦 2-day shipping {formatMoney(vendor.twoDayShipFee)} (shelf-stable items)</span>
+          )}
+          {vendor.courierPickup && (
+            <span className="rounded-full bg-white px-3 py-1">🚚 NYC next-day delivery {formatMoney(localDelivery.fee)}</span>
           )}
           {vendor.freeShippingMin != null && (
             <span className="rounded-full bg-white px-3 py-1">✨ Free shipping over {formatMoney(vendor.freeShippingMin)}</span>

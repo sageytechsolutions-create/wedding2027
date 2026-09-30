@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { KosherBadges } from "./KosherBadges";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, vendorLocation } from "@/lib/money";
 
 export interface ProductCardData {
   slug: string;
@@ -38,7 +38,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
       </div>
       <div className="p-4">
         <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-          {product.vendor.name} · {product.vendor.city}, {product.vendor.state}
+          {[product.vendor.name, vendorLocation(product.vendor)].filter(Boolean).join(" · ")}
         </p>
         <h3 className="mt-1 font-semibold leading-snug group-hover:text-brand">{product.name}</h3>
         <div className="mt-2">

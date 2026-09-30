@@ -75,8 +75,8 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
                   )}
                 </div>
                 <span className="text-sm text-stone-600">
-                  {methodLabel(vo.method)} · {vo.method === "local_delivery" ? "deliver" : "ship"} by{" "}
-                  <strong>{formatDeliveryDate(vo.method === "local_delivery" ? vo.deliveryDate : vo.shipDate)}</strong>
+                  {methodLabel(vo.method)} · {vo.method === "local_delivery" ? "courier pickup" : "ship by"}{" "}
+                  <strong>{formatDeliveryDate(vo.shipDate)}</strong>
                 </span>
               </div>
               <div className="mt-3 grid gap-4 text-sm sm:grid-cols-2">
@@ -190,21 +190,26 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
         <form action={updateVendorSettings} className="mt-4 grid gap-4 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2">
           <input type="hidden" name="id" value={vendor.id} />
           <input type="hidden" name="slug" value={vendor.slug} />
-          <label className="text-sm sm:col-span-2">
-            Local delivery area (3-digit ZIP prefixes, comma separated)
-            <input name="localZipPrefixes" defaultValue={vendor.localZipPrefixes} placeholder="e.g. 100, 112" className={`${field} mt-1 w-full`} />
-          </label>
-          <label className="text-sm">
-            Local delivery fee ($)
-            <input name="localDeliveryFee" type="number" step="0.01" min="0" defaultValue={(vendor.localDeliveryFee / 100).toFixed(2)} className={`${field} mt-1 w-full`} />
-          </label>
+          <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 sm:col-span-2">
+            {vendor.courierPickup
+              ? "🚚 The KosherValet courier picks up your local NYC orders and delivers them next day. Just have them packed by pickup."
+              : "Local courier pickup isn't set up for your location, so all orders ship."}
+          </p>
           <label className="text-sm">
             Overnight shipping fee ($)
             <input name="overnightShipFee" type="number" step="0.01" min="0" defaultValue={(vendor.overnightShipFee / 100).toFixed(2)} className={`${field} mt-1 w-full`} />
           </label>
           <label className="text-sm">
-            Priority holiday delivery fee ($)
-            <input name="priorityFee" type="number" step="0.01" min="0" defaultValue={(vendor.priorityFee / 100).toFixed(2)} className={`${field} mt-1 w-full`} />
+            2-day shipping fee ($, blank = don&apos;t offer; shelf-stable orders only)
+            <input name="twoDayShipFee" type="number" step="0.01" min="0" defaultValue={vendor.twoDayShipFee != null ? (vendor.twoDayShipFee / 100).toFixed(2) : ""} className={`${field} mt-1 w-full`} />
+          </label>
+          <label className="text-sm">
+            Priority before Yom Tov, overnight ($)
+            <input name="priorityOvernightFee" type="number" step="0.01" min="0" defaultValue={(vendor.priorityOvernightFee / 100).toFixed(2)} className={`${field} mt-1 w-full`} />
+          </label>
+          <label className="text-sm">
+            Priority before Yom Tov, 2-day ($)
+            <input name="priorityTwoDayFee" type="number" step="0.01" min="0" defaultValue={(vendor.priorityTwoDayFee / 100).toFixed(2)} className={`${field} mt-1 w-full`} />
           </label>
           <label className="text-sm">
             Free shipping on orders over ($, blank = never)
@@ -213,7 +218,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
           <label className="flex items-center gap-2 self-end text-sm">
             <input type="checkbox" name="shipsNationwide" defaultChecked={vendor.shipsNationwide} /> Ship nationwide
           </label>
-          <p className="text-sm text-stone-500 sm:col-span-2">Platform commission: {Math.round(vendor.commissionRate * 100)}% of item sales. You keep shipping fees.</p>
+          <p className="text-sm text-stone-500 sm:col-span-2">Platform commission: {Math.round(vendor.commissionRate * 100)}% of item sales. You keep shipping and priority fees for orders you ship; local courier fees go to KosherValet.</p>
           <button className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white sm:col-span-2 sm:justify-self-start">Save settings</button>
         </form>
       </section>
