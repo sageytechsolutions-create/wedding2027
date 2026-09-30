@@ -6,6 +6,7 @@ import { site } from "@/lib/config";
 import { formatDeliveryDate, localNow } from "@/lib/fulfillment";
 import { upcomingHoliday } from "@/lib/jewish-calendar";
 import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { logout } from "@/lib/auth-actions";
 import { currentStoreStatus } from "@/lib/store-hours";
 import "./globals.css";
@@ -42,26 +43,46 @@ function Banner() {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCurrentUser();
+  const [user, categoryRows] = await Promise.all([
+    getCurrentUser(),
+    db.product.findMany({ where: { active: true, vendor: { active: true } }, distinct: ["category"], select: { category: true }, orderBy: { category: "asc" } }),
+  ]);
+  const categories = categoryRows.map((c) => c.category);
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
         <CartProvider>
           <Banner />
-          <header className="sticky top-0 z-10 border-b border-stone-200 bg-cream/90 backdrop-blur">
-            <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-              <Link href="/" className="font-display text-2xl font-bold text-brand">{site.name}</Link>
-              <nav className="flex items-center gap-5 text-sm font-medium">
-                <Link href="/shop" className="hover:text-brand">Shop</Link>
-                <Link href="/vendors" className="hover:text-brand">Vendors</Link>
+          <header className="sticky top-0 z-20 border-b border-stone-200 bg-white">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
+              <Link href="/" className="font-display text-2xl font-bold tracking-tight text-stone-900">
+                {site.name.split(" ")[0]} <span className="text-brand">{site.name.split(" ").slice(1).join(" ")}</span>
+              </Link>
+              <form action="/shop" role="search" className="order-last flex w-full items-center rounded-full border border-stone-300 bg-stone-50 px-4 focus-within:border-stone-900 focus-within:bg-white md:order-none md:w-auto md:flex-1">
+                <span aria-hidden className="text-stone-400">⌕</span>
+                <label htmlFor="site-search" className="sr-only">Search</label>
+                <input id="site-search" name="q" placeholder="Search for food, shops or cities" className="w-full bg-transparent px-3 py-2.5 text-sm focus:outline-none" />
+              </form>
+              <nav className="ml-auto flex items-center gap-5 text-sm font-medium md:ml-0">
+                <Link href="/vendors" className="hidden hover:text-brand sm:inline">Shops</Link>
                 <Link href="/track" className="hidden hover:text-brand sm:inline">Track order</Link>
                 <CartLink />
               </nav>
             </div>
+            <nav aria-label="Categories" className="border-t border-stone-100">
+              <div className="mx-auto flex max-w-7xl gap-6 overflow-x-auto px-4 py-2.5 text-sm font-medium whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <Link href="/shop" className="text-stone-900 hover:text-brand">Shop all</Link>
+                {categories.map((c) => (
+                  <Link key={c} href={`/shop?category=${encodeURIComponent(c)}`} className="text-stone-600 hover:text-brand">{c}</Link>
+                ))}
+                <Link href="/shop?kosher=passover" className="text-stone-600 hover:text-brand">Kosher for Passover</Link>
+                <Link href="/vendors" className="text-stone-600 hover:text-brand">All shops</Link>
+              </div>
+            </nav>
           </header>
-          <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+          <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
           <footer className="mt-16 border-t border-stone-200 py-8 text-sm text-stone-500">
-            <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-4 px-4">
+            <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-4 px-4">
               <div className="space-y-2">
                 <p>© {new Date().getFullYear()} {site.legalName}. Shipping nationwide.</p>
                 <nav className="flex flex-wrap gap-4">
