@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/StatusBadge";
+import { RefundPriorityButton } from "@/components/RefundPriorityButton";
 import { UserAdmin } from "@/components/UserAdmin";
 import { createVendor, toggleCourierPickup, toggleVendor } from "@/lib/actions";
 import { requireAdmin } from "@/lib/auth";
+import { formatDeliveryDate } from "@/lib/format";
+import { localNow } from "@/lib/time";
 import { db } from "@/lib/db";
 import { formatMoney, vendorLocation } from "@/lib/money";
 
@@ -13,7 +16,8 @@ const field = "rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm";
 
 export default async function AdminPage() {
   const admin = await requireAdmin();
-  const [vendors, recent, totals, users, refunds, unreversed] = await Promise.all([
+  const today = localNow(new Date()).day;
+  const [vendors, recent, totals, users, refunds, unreversed, latePriority, priorityRefunded] = await Promise.all([
     db.vendor.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -32,6 +36,24 @@ export default async function AdminPage() {
     // Customer refunded, but the vendor had already been paid and pulling it back failed.
     db.vendorOrder.findMany({
       where: { status: "cancelled", stripeTransferId: { not: null }, stripeTransferReversalId: null, stripeRefundId: { not: null } },
+      include: { order: true, vendor: true },
+    }),
+    // Priority orders past their guaranteed date and not marked delivered: likely owed a priority-fee refund.
+    db.vendorOrder.findMany({
+      where: {
+        priority: true,
+        priorityRefundedAt: null,
+        deliveryDate: { lt: today },
+        status: { notIn: ["delivered", "cancelled"] },
+        order: { paymentStatus: "paid" },
+      },
+      orderBy: { deliveryDate: "asc" },
+      include: { order: true, vendor: true },
+    }),
+    // Shown for a week as confirmation, and as a record of the guarantee being honored.
+    db.vendorOrder.findMany({
+      where: { priorityRefundedAt: { gte: new Date(Date.now() - 7 * 86_400_000) } },
+      orderBy: { priorityRefundedAt: "desc" },
       include: { order: true, vendor: true },
     }),
   ]);
@@ -63,6 +85,36 @@ export default async function AdminPage() {
           </div>
         ))}
       </div>
+
+      {(latePriority.length > 0 || priorityRefunded.length > 0) && (
+        <section className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950">
+          <h2 className="font-semibold">⚡ Late priority orders</h2>
+          {latePriority.length > 0 ? (
+            <p className="mt-1">
+              These were guaranteed to arrive before Yom Tov and aren&apos;t marked delivered. If they were late, refund the priority fee (our
+              promise). If they did arrive on time, have the vendor mark them delivered.
+            </p>
+          ) : (
+            <p className="mt-1">None waiting. 👍</p>
+          )}
+          <ul className="mt-3 space-y-2">
+            {latePriority.map((vo) => (
+              <li key={vo.id} className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span>
+                  <strong>{vo.order.number}</strong> · {vo.vendor.name} · due {formatDeliveryDate(vo.deliveryDate)} · {vo.status.replace(/_/g, " ")}
+                </span>
+                <RefundPriorityButton vendorOrderId={vo.id} amount={vo.priorityFee} />
+              </li>
+            ))}
+            {priorityRefunded.map((vo) => (
+              <li key={vo.id} className="text-emerald-800">
+                ✓ <strong>{vo.order.number}</strong> · {vo.vendor.name} · {formatMoney(vo.priorityFee)} priority fee refunded{" "}
+                {vo.priorityRefundedAt!.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" })}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {unreversed.length > 0 && (
         <section className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">

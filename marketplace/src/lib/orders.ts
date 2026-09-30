@@ -127,6 +127,7 @@ export async function placeOrder(input: CheckoutInput): Promise<{ number: string
         shipDate: new Date(`${p?.shipDate ?? option.shipDate}T00:00:00Z`),
         deliveryDate: new Date(`${p?.deliveryDate ?? option.deliveryDate}T00:00:00Z`),
         priority: p != null,
+        priorityFee: p?.fee ?? 0,
         holidayName: p ? (g.quote.holiday?.name ?? null) : null,
         subtotal: g.subtotal,
         shippingFee,

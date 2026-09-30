@@ -70,7 +70,12 @@ export default async function OrderPage({
                   {order.stripePaymentIntentId && " to your card"}.
                 </span>
               ) : (
-                <>{methodLabel(vo.method)}. Arrives <strong>{formatDeliveryDate(vo.deliveryDate)}</strong></>
+                <>
+                  {methodLabel(vo.method)}. Arrives <strong>{formatDeliveryDate(vo.deliveryDate)}</strong>
+                  {vo.priorityRefundedAt && (
+                    <span className="block text-emerald-700">Sorry it was late: your {formatMoney(vo.priorityFee)} priority fee was refunded.</span>
+                  )}
+                </>
               )}
             </p>
             {vo.trackingNumber && (

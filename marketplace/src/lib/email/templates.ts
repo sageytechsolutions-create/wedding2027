@@ -295,3 +295,42 @@ ${button(d.orderUrl, "View your order")}`,
 
   return { subject: `${headline}: ${formatMoney(d.amount)} refunded (${d.number})`, html, text };
 }
+
+// --- Customer: late priority order, priority fee refunded -----------------------------
+
+export interface PriorityRefundData {
+  number: string;
+  orderUrl: string;
+  customerName: string;
+  vendorName: string;
+  holidayName: string | null;
+  amount: number;
+  toCard: boolean;
+}
+
+export function priorityRefundEmail(d: PriorityRefundData): Rendered {
+  const holiday = d.holidayName ?? "Yom Tov";
+  const refundLine = d.toCard
+    ? `We've refunded your ${formatMoney(d.amount)} priority fee to your original payment method. It usually appears within 5–10 business days.`
+    : `We've refunded your ${formatMoney(d.amount)} priority fee.`;
+
+  const html = layout(
+    `Your priority delivery was late. ${refundLine}`,
+    `<h1 style="font-family:Georgia,serif;font-size:24px;margin:0 0 8px">We're sorry your delivery was late</h1>
+<p style="margin:0">Hi ${e(firstName(d.customerName))}, you paid for priority delivery of your ${e(d.vendorName)} order <strong>${e(d.number)}</strong> before ${e(holiday)}, and it didn't arrive on time.</p>
+<p style="margin:16px 0 0;padding:12px 14px;background:#ecfdf5;border-radius:10px;color:#065f46"><strong>${e(refundLine)}</strong></p>
+${button(d.orderUrl, "View your order")}`,
+  );
+
+  const text = [
+    "We're sorry your delivery was late.",
+    "",
+    `Hi ${firstName(d.customerName)}, you paid for priority delivery of your ${d.vendorName} order ${d.number} before ${holiday}, and it didn't arrive on time.`,
+    "",
+    refundLine,
+    "",
+    `View your order: ${d.orderUrl}`,
+  ].join("\n");
+
+  return { subject: `Priority fee refunded: ${formatMoney(d.amount)} (${d.number})`, html, text };
+}

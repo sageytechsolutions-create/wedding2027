@@ -10,7 +10,7 @@ import { deliver } from "./email/send";
 import { KOSHER_LABELS, KOSHER_TYPES } from "./kosher";
 import { notifyVendorOrderStatus } from "./notifications";
 import { VENDOR_ORDER_STATUSES } from "./orders";
-import { cancelVendorOrder, type CancelResult } from "./refunds";
+import { cancelVendorOrder, refundPriorityFee, type CancelResult } from "./refunds";
 import { siteUrl, stripe } from "./stripe";
 
 // Every export here is a public endpoint, so each one checks who is signed in
@@ -218,6 +218,17 @@ export async function cancelOrderAction(_prev: CancelResult | undefined, formDat
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { id, reason } = parsed.data;
   const result = await cancelVendorOrder(id, reason, user);
+  const vo = await db.vendorOrder.findUnique({ where: { id }, include: { vendor: true } });
+  if (vo) revalidatePath(`/vendor/${vo.vendor.slug}`);
+  revalidatePath("/admin");
+  return result;
+}
+
+// Admin: refund the priority fee on a priority order that arrived late.
+export async function refundPriorityFeeAction(_prev: CancelResult | undefined, formData: FormData): Promise<CancelResult> {
+  const admin = await requireAdmin();
+  const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
+  const result = await refundPriorityFee(id, admin);
   const vo = await db.vendorOrder.findUnique({ where: { id }, include: { vendor: true } });
   if (vo) revalidatePath(`/vendor/${vo.vendor.slug}`);
   revalidatePath("/admin");

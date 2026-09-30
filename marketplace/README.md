@@ -66,6 +66,7 @@ Passwords are hashed with scrypt; sessions are random tokens stored hashed in th
 | New order | Each login for that vendor | Same time; flags ⚡ priority orders, shows ship-by date and payout |
 | Shipped / Out for delivery | Customer | Vendor marks their part "Shipped" (with carrier tracking link) or "Out for delivery" (courier) |
 | Cancelled & refunded | Customer | Vendor (or admin) cancels their part of the order |
+| Priority fee refunded | Customer | Admin refunds the priority fee on a late priority order |
 
 Each email is sent at most once (a vendor toggling the status back and forth doesn't resend). Every email is kept in **Admin → Emails** with a preview, its status, and a Retry button for failures. A failed email never blocks checkout or order updates.
 
@@ -80,6 +81,14 @@ Each vendor's part of an order can be cancelled on its own with **Cancel & refun
 - **Vendor payout**: if the vendor was already paid, the payout is pulled back from their Stripe account automatically. If that fails, the customer is still refunded and the admin dashboard lists the payout to reverse by hand.
 - **Safety**: the refund happens first, and nothing changes if it fails. Stripe calls use idempotency keys and the database only records a cancellation once, so double clicks or retries never refund twice. Cancelled shipments can't be reopened.
 - Stripe doesn't return its processing fee on refunds, so the platform absorbs it.
+
+### On-time guarantee for priority orders
+
+If a priority order arrives late, the customer gets the priority fee back (promised on `/shipping`).
+Priority orders past their guaranteed date and not marked delivered are listed on the admin dashboard with a
+**Refund priority fee** button (admins only). It refunds just that fee and emails the customer. For shipped orders
+the vendor received the fee, so it comes back out of their payout; for NYC courier deliveries the platform kept
+it and absorbs it. A later cancellation of the same order refunds only what's left.
 
 ## Turning on Stripe payments
 

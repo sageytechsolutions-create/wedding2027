@@ -1,6 +1,7 @@
 import { site } from "@/lib/config";
 import { notFound } from "next/navigation";
 import { CancelOrderForm } from "@/components/CancelOrderForm";
+import { RefundPriorityButton } from "@/components/RefundPriorityButton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { connectStripe, createProduct, toggleProduct, updateVendorOrder, updateVendorSettings } from "@/lib/actions";
 import { requireVendorAccess } from "@/lib/auth";
@@ -79,6 +80,9 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
                   {vo.priority && (
                     <span className="ml-2 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">⚡ Priority before {vo.holidayName}</span>
                   )}
+                  {vo.priorityRefundedAt && (
+                    <span className="ml-2 text-xs text-stone-500">Late: {formatMoney(vo.priorityFee)} priority fee refunded</span>
+                  )}
                 </div>
                 <span className="text-sm text-stone-600">
                   {methodLabel(vo.method)} · {vo.method === "local_delivery" ? "courier pickup" : "ship by"}{" "}
@@ -125,7 +129,10 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
               </form>
               {/* Vendors can cancel until it's on its way; admins at any time (e.g. lost in transit). */}
               {(user.role === "admin" || VENDOR_CANCELLABLE.includes(vo.status)) && (
-                <div className="mt-3">
+                <div className="mt-3 flex flex-wrap items-start gap-4">
+                  {user.role === "admin" && vo.priority && vo.priorityFee > 0 && !vo.priorityRefundedAt && (
+                    <RefundPriorityButton vendorOrderId={vo.id} amount={vo.priorityFee} />
+                  )}
                   <CancelOrderForm
                     vendorOrderId={vo.id}
                     amount={vo.subtotal + vo.shippingFee}

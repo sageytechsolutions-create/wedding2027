@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { sendEmail } from "./email/send";
-import { orderConfirmationEmail, refundEmail, shippedEmail, vendorNewOrderEmail } from "./email/templates";
+import { orderConfirmationEmail, priorityRefundEmail, refundEmail, shippedEmail, vendorNewOrderEmail } from "./email/templates";
 import { siteUrl } from "./stripe";
 import { trackingUrl } from "./tracking";
 
@@ -98,4 +98,20 @@ export async function notifyRefund(vendorOrderId: string) {
     toCard: vo.order.stripePaymentIntentId != null,
   });
   await sendEmail({ key: `refund:${vo.id}`, to: vo.order.email, ...email });
+}
+
+// When a late priority order's priority fee is refunded.
+export async function notifyPriorityRefund(vendorOrderId: string) {
+  const vo = await db.vendorOrder.findUniqueOrThrow({ where: { id: vendorOrderId }, include: { order: true, vendor: true } });
+  if (!vo.priorityRefundedAt) return;
+  const email = priorityRefundEmail({
+    number: vo.order.number,
+    orderUrl: orderUrl(vo.order),
+    customerName: vo.order.name,
+    vendorName: vo.vendor.name,
+    holidayName: vo.holidayName,
+    amount: vo.priorityFee,
+    toCard: vo.order.stripePaymentIntentId != null,
+  });
+  await sendEmail({ key: `priority-refund:${vo.id}`, to: vo.order.email, ...email });
 }

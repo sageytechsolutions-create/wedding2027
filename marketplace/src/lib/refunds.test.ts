@@ -15,13 +15,13 @@ vi.mock("./stripe", () => ({
 
 import type { CurrentUser } from "./auth";
 import { db } from "./db";
-import { cancelVendorOrder } from "./refunds";
+import { cancelVendorOrder, refundPriorityFee } from "./refunds";
 
 const admin: CurrentUser = { id: "admin", email: "admin@test", role: "admin", vendorId: null, vendorSlug: null };
 let vendorUser: CurrentUser;
 let otherVendorUser: CurrentUser;
 
-async function makeOrder(opts: { status?: string; transferId?: string | null; paymentIntent?: string | null } = {}) {
+async function makeOrder(opts: { status?: string; transferId?: string | null; paymentIntent?: string | null; priorityFee?: number; method?: string } = {}) {
   const vendor = await db.vendor.findFirstOrThrow({ where: { slug: "v1" } });
   const product = await db.product.findFirstOrThrow({ where: { vendorId: vendor.id } });
   const order = await db.order.create({
@@ -41,7 +41,11 @@ async function makeOrder(opts: { status?: string; transferId?: string | null; pa
       vendorOrders: {
         create: {
           vendorId: vendor.id,
-          method: "overnight_shipping",
+          method: opts.method ?? "overnight_shipping",
+          // shippingFee 999 includes the priority fee when there is one.
+          priority: (opts.priorityFee ?? 0) > 0,
+          priorityFee: opts.priorityFee ?? 0,
+          holidayName: opts.priorityFee ? "Shemini Atzeres" : null,
           shipDate: new Date(),
           deliveryDate: new Date(),
           subtotal: 5000,
@@ -152,5 +156,65 @@ describe("cancelVendorOrder", () => {
     expect((await cancelVendorOrder(vo.id, "Sold out", vendorUser)).refunded).toBe(5999);
     expect(fake.refunds.create).not.toHaveBeenCalled();
     expect((await db.emailLog.findFirstOrThrow()).subject).toContain("refunded");
+  });
+});
+
+describe("refundPriorityFee (late priority orders)", () => {
+  it("refunds only the priority fee, taken from a vendor not yet paid out", async () => {
+    const { order, vo } = await makeOrder({ priorityFee: 500 });
+    const result = await refundPriorityFee(vo.id, admin);
+    expect(result).toEqual({ refunded: 500, warning: undefined });
+    expect(fake.refunds.create).toHaveBeenCalledWith(
+      expect.objectContaining({ payment_intent: "pi_123", amount: 500 }),
+      { idempotencyKey: `priority-refund-${vo.id}` },
+    );
+    const saved = await db.vendorOrder.findUniqueOrThrow({ where: { id: vo.id } });
+    expect(saved.vendorPayout).toBe(4999 - 500);
+    expect(saved.priorityRefundedAt).not.toBeNull();
+    expect((await db.order.findUniqueOrThrow({ where: { id: order.id } })).refundedAmount).toBe(500);
+    expect((await db.emailLog.findUniqueOrThrow({ where: { key: `priority-refund:${vo.id}` } })).subject).toBe(`Priority fee refunded: $5.00 (${order.number})`);
+  });
+
+  it("pulls the fee back from a vendor who was already paid", async () => {
+    const { vo } = await makeOrder({ priorityFee: 500, transferId: "tr_1" });
+    await refundPriorityFee(vo.id, admin);
+    expect(fake.transfers.createReversal).toHaveBeenCalledWith("tr_1", expect.objectContaining({ amount: 500 }), { idempotencyKey: `priority-reversal-${vo.id}` });
+    expect(await db.vendorOrder.findUniqueOrThrow({ where: { id: vo.id } })).toMatchObject({ vendorPayout: 4999, payoutReversed: 500 });
+  });
+
+  it("leaves the vendor alone for courier deliveries (the platform kept that fee)", async () => {
+    const { vo } = await makeOrder({ priorityFee: 500, method: "local_delivery", transferId: "tr_1" });
+    await refundPriorityFee(vo.id, admin);
+    expect(fake.transfers.createReversal).not.toHaveBeenCalled();
+    expect(await db.vendorOrder.findUniqueOrThrow({ where: { id: vo.id } })).toMatchObject({ vendorPayout: 4999, payoutReversed: 0 });
+  });
+
+  it("is admin-only, once-only, and not for regular or cancelled orders", async () => {
+    const { order, vo } = await makeOrder({ priorityFee: 500 });
+    expect((await refundPriorityFee(vo.id, vendorUser)).error).toMatch(/admins/);
+    await Promise.all([refundPriorityFee(vo.id, admin), refundPriorityFee(vo.id, admin)]);
+    expect((await db.order.findUniqueOrThrow({ where: { id: order.id } })).refundedAmount).toBe(500);
+
+    const plain = await makeOrder();
+    expect((await refundPriorityFee(plain.vo.id, admin)).error).toMatch(/isn't a priority order/);
+
+    const cancelled = await makeOrder({ priorityFee: 500 });
+    await cancelVendorOrder(cancelled.vo.id, "Sold out", admin);
+    expect((await refundPriorityFee(cancelled.vo.id, admin)).error).toMatch(/cancelled/);
+  });
+
+  it("a later cancellation refunds only what's left and pulls back only what's left", async () => {
+    const { order, vo } = await makeOrder({ priorityFee: 500, transferId: "tr_1" });
+    await refundPriorityFee(vo.id, admin);
+    fake.refunds.create.mockClear();
+    fake.transfers.createReversal.mockClear();
+
+    const result = await cancelVendorOrder(vo.id, "Lost in transit", admin);
+    expect(result.refunded).toBe(5999 - 500);
+    expect(fake.refunds.create).toHaveBeenCalledWith(expect.objectContaining({ amount: 5499 }), expect.anything());
+    expect(fake.transfers.createReversal).toHaveBeenCalledWith("tr_1", expect.objectContaining({ amount: 4999 - 500 }), expect.anything());
+    // In total the customer got back exactly what they paid for this shipment.
+    expect((await db.order.findUniqueOrThrow({ where: { id: order.id } })).refundedAmount).toBe(5999);
+    expect((await db.vendorOrder.findUniqueOrThrow({ where: { id: vo.id } })).payoutReversed).toBe(4999);
   });
 });

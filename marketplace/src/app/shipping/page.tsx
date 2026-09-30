@@ -34,7 +34,7 @@ export default function ShippingPolicy() {
       <h2>Priority delivery before Yom Tov</h2>
       <p>
         In the two weeks before a holiday, you can add priority delivery at checkout. Priority orders are packed first and guaranteed to arrive
-        before the holiday begins.
+        before the holiday begins. If a priority order arrives late, we&apos;ll refund the priority fee.
       </p>
 
       <h2>Perishable food</h2>

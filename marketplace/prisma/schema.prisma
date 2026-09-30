@@ -111,7 +111,13 @@ model VendorOrder {
   shippingFee      Int
   commission       Int
   priority         Boolean   @default(false)
+  priorityFee      Int       @default(0) // cents; part of shippingFee
   holidayName      String?
+  // Set when a late priority order's priority fee is refunded (our on-time guarantee).
+  priorityRefundedAt     DateTime?
+  stripePriorityRefundId String?
+  // How much of this vendor's payout has already been pulled back from their Stripe account.
+  payoutReversed   Int       @default(0)
   stripeTransferId String?
   vendorPayout     Int
   status           String    @default("pending") // pending | preparing | shipped | out_for_delivery | delivered | cancelled
