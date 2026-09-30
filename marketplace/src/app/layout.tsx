@@ -5,6 +5,8 @@ import { CartLink } from "@/components/CartLink";
 import { site } from "@/lib/config";
 import { formatDeliveryDate, localNow } from "@/lib/fulfillment";
 import { upcomingHoliday } from "@/lib/jewish-calendar";
+import { getCurrentUser } from "@/lib/auth";
+import { logout } from "@/lib/auth-actions";
 import { currentStoreStatus } from "@/lib/store-hours";
 import "./globals.css";
 
@@ -36,7 +38,8 @@ function Banner() {
   return null;
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
@@ -57,9 +60,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <footer className="mt-16 border-t border-stone-200 py-8 text-sm text-stone-500">
             <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-4 px-4">
               <p>© {new Date().getFullYear()} {site.name}. Shipping nationwide.</p>
-              <div className="flex gap-4">
-                <Link href="/vendor" className="hover:text-brand">Vendor portal</Link>
-                <Link href="/admin" className="hover:text-brand">Admin</Link>
+              <div className="flex items-center gap-4">
+                {user ? (
+                  <>
+                    <Link href={user.role === "admin" ? "/admin" : "/vendor"} className="hover:text-brand">
+                      {user.role === "admin" ? "Admin" : "Vendor portal"}
+                    </Link>
+                    <Link href="/account" className="hover:text-brand">Account</Link>
+                    <form action={logout}>
+                      <button className="hover:text-brand">Sign out</button>
+                    </form>
+                  </>
+                ) : (
+                  <Link href="/login" className="hover:text-brand">Partner sign in</Link>
+                )}
               </div>
             </div>
           </footer>

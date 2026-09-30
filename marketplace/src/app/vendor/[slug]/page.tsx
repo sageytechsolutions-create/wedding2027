@@ -1,7 +1,9 @@
 import { site } from "@/lib/config";
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/StatusBadge";
-import { connectStripe, createProduct, refreshStripeStatus, toggleProduct, updateVendorOrder, updateVendorSettings } from "@/lib/actions";
+import { connectStripe, createProduct, toggleProduct, updateVendorOrder, updateVendorSettings } from "@/lib/actions";
+import { requireVendorAccess } from "@/lib/auth";
+import { refreshStripeStatus } from "@/lib/payouts";
 import { db } from "@/lib/db";
 import { formatDeliveryDate, methodLabel } from "@/lib/fulfillment";
 import { formatMoney } from "@/lib/money";
@@ -17,6 +19,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const found = await db.vendor.findUnique({ where: { slug }, select: { id: true, stripeAccountId: true, stripePayoutsEnabled: true } });
   if (!found) notFound();
+  await requireVendorAccess(found.id, `/vendor/${slug}`);
   // Coming back from Stripe onboarding: pick up the new status and pay out anything owed.
   if (found.stripeAccountId && !found.stripePayoutsEnabled) await refreshStripeStatus(found.id);
 
@@ -93,7 +96,6 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
               </div>
               <form action={updateVendorOrder} className="mt-4 flex flex-wrap items-center gap-2 border-t border-stone-100 pt-4">
                 <input type="hidden" name="id" value={vo.id} />
-                <input type="hidden" name="vendorSlug" value={vendor.slug} />
                 <select name="status" defaultValue={vo.status} className={field}>
                   {VENDOR_ORDER_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
                 </select>
@@ -122,7 +124,6 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
               <span className="text-sm">{formatMoney(p.price)}</span>
               <form action={toggleProduct}>
                 <input type="hidden" name="id" value={p.id} />
-                <input type="hidden" name="vendorSlug" value={vendor.slug} />
                 <button className="text-sm text-brand">{p.active ? "Hide" : "Show"}</button>
               </form>
             </li>
@@ -133,7 +134,6 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
           <summary className="cursor-pointer font-medium">+ Add a product</summary>
           <form action={createProduct} className="mt-4 grid gap-3 sm:grid-cols-2">
             <input type="hidden" name="vendorId" value={vendor.id} />
-            <input type="hidden" name="vendorSlug" value={vendor.slug} />
             <input name="name" required placeholder="Product name" className={field} />
             <input name="price" required type="number" step="0.01" min="0" placeholder="Price ($)" className={field} />
             <input name="category" required placeholder="Category (e.g. BBQ, Desserts)" className={field} />
@@ -190,7 +190,6 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
         <h2 className="text-xl font-semibold">Delivery & shipping</h2>
         <form action={updateVendorSettings} className="mt-4 grid gap-4 rounded-2xl border border-stone-200 bg-white p-5 sm:grid-cols-2">
           <input type="hidden" name="id" value={vendor.id} />
-          <input type="hidden" name="slug" value={vendor.slug} />
           <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 sm:col-span-2">
             {vendor.courierPickup
               ? `🚚 The ${site.name} courier picks up your local NYC orders and delivers them next day. Just have them packed by pickup.`

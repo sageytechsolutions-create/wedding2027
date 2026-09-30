@@ -3,15 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { requireAdmin, requireVendorAccess } from "./auth";
 import { db } from "./db";
 import { isInCourierArea } from "./fulfillment";
 import { KOSHER_LABELS, KOSHER_TYPES } from "./kosher";
-import { sendPendingPayouts } from "./orders";
-import { siteUrl, stripe } from "./stripe";
 import { VENDOR_ORDER_STATUSES } from "./orders";
+import { siteUrl, stripe } from "./stripe";
 
-// NOTE: these actions are unauthenticated in this MVP. Before launch, gate
-// vendor actions behind vendor login and admin actions behind an admin role.
+// Every export here is a public endpoint, so each one checks who is signed in
+// and looks up ownership from the database rather than trusting form fields.
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -23,24 +23,24 @@ export async function updateVendorOrder(formData: FormData) {
   const data = z
     .object({
       id: z.string(),
-      vendorSlug: z.string(),
       status: z.enum(VENDOR_ORDER_STATUSES),
       carrier: z.string().max(40).optional(),
       trackingNumber: z.string().max(80).optional(),
     })
     .parse(Object.fromEntries(formData));
+  const vendorOrder = await db.vendorOrder.findUniqueOrThrow({ where: { id: data.id }, include: { vendor: true } });
+  await requireVendorAccess(vendorOrder.vendorId);
   await db.vendorOrder.update({
     where: { id: data.id },
     data: { status: data.status, carrier: data.carrier || null, trackingNumber: data.trackingNumber || null },
   });
-  revalidatePath(`/vendor/${data.vendorSlug}`);
+  revalidatePath(`/vendor/${vendorOrder.vendor.slug}`);
 }
 
 export async function createProduct(formData: FormData) {
   const data = z
     .object({
       vendorId: z.string(),
-      vendorSlug: z.string(),
       name: z.string().min(2).max(120),
       description: z.string().min(2).max(2000),
       price: dollarsToCents,
@@ -54,10 +54,12 @@ export async function createProduct(formData: FormData) {
       perishable: z.string().optional(),
     })
     .parse({ ...Object.fromEntries(formData), labels: formData.getAll("labels") });
+  await requireVendorAccess(data.vendorId);
+  const vendor = await db.vendor.findUniqueOrThrow({ where: { id: data.vendorId } });
   await db.product.create({
     data: {
-      vendorId: data.vendorId,
-      slug: `${data.vendorSlug}-${slugify(data.name)}-${Date.now().toString(36)}`,
+      vendorId: vendor.id,
+      slug: `${vendor.slug}-${slugify(data.name)}-${Date.now().toString(36)}`,
       name: data.name,
       description: data.description,
       price: data.price,
@@ -71,21 +73,21 @@ export async function createProduct(formData: FormData) {
       labels: data.labels.join(","),
     },
   });
-  revalidatePath(`/vendor/${data.vendorSlug}`);
+  revalidatePath(`/vendor/${vendor.slug}`);
 }
 
 export async function toggleProduct(formData: FormData) {
-  const { id, vendorSlug } = z.object({ id: z.string(), vendorSlug: z.string() }).parse(Object.fromEntries(formData));
-  const product = await db.product.findUniqueOrThrow({ where: { id } });
+  const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
+  const product = await db.product.findUniqueOrThrow({ where: { id }, include: { vendor: true } });
+  await requireVendorAccess(product.vendorId);
   await db.product.update({ where: { id }, data: { active: !product.active } });
-  revalidatePath(`/vendor/${vendorSlug}`);
+  revalidatePath(`/vendor/${product.vendor.slug}`);
 }
 
 export async function updateVendorSettings(formData: FormData) {
   const data = z
     .object({
       id: z.string(),
-      slug: z.string(),
       overnightShipFee: dollarsToCents,
       twoDayShipFee: z.string().optional(),
       priorityOvernightFee: dollarsToCents,
@@ -94,12 +96,13 @@ export async function updateVendorSettings(formData: FormData) {
       shipsNationwide: z.string().optional(),
     })
     .parse(Object.fromEntries(formData));
+  await requireVendorAccess(data.id);
   // Blank = none (no free-shipping threshold / no 2-day option).
   const optionalCents = (v?: string) => {
     const cents = v?.trim() ? Math.round(Number(v) * 100) : null;
     return cents != null && Number.isFinite(cents) && cents >= 0 ? cents : null;
   };
-  await db.vendor.update({
+  const vendor = await db.vendor.update({
     where: { id: data.id },
     data: {
       overnightShipFee: data.overnightShipFee,
@@ -110,10 +113,11 @@ export async function updateVendorSettings(formData: FormData) {
       priorityTwoDayFee: data.priorityTwoDayFee,
     },
   });
-  revalidatePath(`/vendor/${data.slug}`);
+  revalidatePath(`/vendor/${vendor.slug}`);
 }
 
 export async function createVendor(formData: FormData) {
+  await requireAdmin();
   const data = z
     .object({
       name: z.string().min(2).max(100),
@@ -149,6 +153,7 @@ export async function createVendor(formData: FormData) {
 }
 
 export async function toggleCourierPickup(formData: FormData) {
+  await requireAdmin();
   const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
   const vendor = await db.vendor.findUniqueOrThrow({ where: { id } });
   await db.vendor.update({ where: { id }, data: { courierPickup: !vendor.courierPickup } });
@@ -156,6 +161,7 @@ export async function toggleCourierPickup(formData: FormData) {
 }
 
 export async function toggleVendor(formData: FormData) {
+  await requireAdmin();
   const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
   const vendor = await db.vendor.findUniqueOrThrow({ where: { id } });
   await db.vendor.update({ where: { id }, data: { active: !vendor.active } });
@@ -165,6 +171,7 @@ export async function toggleVendor(formData: FormData) {
 // Starts (or resumes) Stripe Express onboarding so the vendor can receive payouts.
 export async function connectStripe(formData: FormData) {
   const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
+  await requireVendorAccess(id);
   if (!stripe) throw new Error("Stripe is not configured");
   const vendor = await db.vendor.findUniqueOrThrow({ where: { id } });
   let accountId = vendor.stripeAccountId;
@@ -186,17 +193,4 @@ export async function connectStripe(formData: FormData) {
     return_url: `${siteUrl()}/vendor/${vendor.slug}`,
   });
   redirect(link.url);
-}
-
-// Checks whether the vendor finished Stripe onboarding, and if so sends any payouts they're owed.
-export async function refreshStripeStatus(vendorId: string) {
-  if (!stripe) return;
-  const vendor = await db.vendor.findUniqueOrThrow({ where: { id: vendorId } });
-  if (!vendor.stripeAccountId) return;
-  const account = await stripe.accounts.retrieve(vendor.stripeAccountId);
-  const enabled = account.payouts_enabled === true && account.capabilities?.transfers === "active";
-  if (enabled !== vendor.stripePayoutsEnabled) {
-    await db.vendor.update({ where: { id: vendorId }, data: { stripePayoutsEnabled: enabled } });
-  }
-  if (enabled) await sendPendingPayouts({ vendorId });
 }

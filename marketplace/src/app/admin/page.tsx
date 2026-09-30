@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/StatusBadge";
+import { UserAdmin } from "@/components/UserAdmin";
 import { createVendor, toggleCourierPickup, toggleVendor } from "@/lib/actions";
+import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney, vendorLocation } from "@/lib/money";
 
@@ -10,7 +12,8 @@ export const metadata = { title: "Admin" };
 const field = "rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm";
 
 export default async function AdminPage() {
-  const [vendors, recent, totals] = await Promise.all([
+  const admin = await requireAdmin();
+  const [vendors, recent, totals, users] = await Promise.all([
     db.vendor.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -24,6 +27,7 @@ export default async function AdminPage() {
       _sum: { subtotal: true, shippingFee: true, commission: true, vendorPayout: true },
       _count: true,
     }),
+    db.user.findMany({ orderBy: [{ role: "asc" }, { email: "asc" }], include: { vendor: { select: { name: true } } } }),
   ]);
 
   const stats = [
@@ -38,9 +42,7 @@ export default async function AdminPage() {
     <div className="space-y-10">
       <div>
         <h1 className="font-display text-3xl font-bold">Marketplace admin</h1>
-        <p className="mt-2 rounded-lg border border-dashed border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">
-          Demo: this page is open to anyone. Admin login comes before launch.
-        </p>
+
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -116,6 +118,15 @@ export default async function AdminPage() {
             <button className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white sm:justify-self-start">Create vendor</button>
           </form>
         </details>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold">Logins</h2>
+        <p className="mt-1 text-sm text-stone-500">Vendor logins only see their own shop. Admins see everything.</p>
+        <UserAdmin
+          users={users.map((u) => ({ id: u.id, email: u.email, role: u.role, vendorName: u.vendor?.name ?? null, isYou: u.id === admin.id }))}
+          vendors={vendors.map((v) => ({ id: v.id, name: v.name }))}
+        />
       </section>
 
       <section>

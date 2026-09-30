@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { generatePassword, hashPassword } from "../src/lib/password";
 
 const db = new PrismaClient();
 
@@ -116,6 +117,8 @@ function slugify(s: string): string {
 }
 
 async function main() {
+  await db.session.deleteMany();
+  await db.user.deleteMany();
   await db.orderItem.deleteMany();
   await db.vendorOrder.deleteMany();
   await db.order.deleteMany();
@@ -134,6 +137,19 @@ async function main() {
   }
   const count = await db.product.count();
   console.log(`Seeded ${vendors.length} vendors and ${count} products.`);
+
+  // Demo logins with fresh random passwords. In production create real ones with `npm run create-user`.
+  console.log("\nDemo logins (sign in at /login):");
+  const logins: { email: string; role: string; vendorSlug?: string }[] = [
+    { email: "admin@example.com", role: "admin" },
+    ...vendors.map((v) => ({ email: `${v.slug}@example.com`, role: "vendor", vendorSlug: v.slug })),
+  ];
+  for (const login of logins) {
+    const password = generatePassword();
+    const vendor = login.vendorSlug ? await db.vendor.findUniqueOrThrow({ where: { slug: login.vendorSlug } }) : null;
+    await db.user.create({ data: { email: login.email, role: login.role, vendorId: vendor?.id, passwordHash: await hashPassword(password) } });
+    console.log(`  ${login.role.padEnd(6)} ${login.email.padEnd(40)} ${password}`);
+  }
 }
 
 main()

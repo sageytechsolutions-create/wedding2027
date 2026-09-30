@@ -1,18 +1,22 @@
-import { vendorLocation } from "@/lib/money";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { vendorLocation } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Vendor portal" };
 
 export default async function VendorPortalIndex() {
+  const user = await requireUser("/vendor");
+  // Vendor staff go straight to their own dashboard.
+  if (user.role !== "admin") redirect(user.vendorSlug ? `/vendor/${user.vendorSlug}` : "/login?error=forbidden");
+
   const vendors = await db.vendor.findMany({ orderBy: { name: "asc" } });
   return (
     <div className="mx-auto max-w-xl">
-      <h1 className="font-display text-3xl font-bold">Vendor portal</h1>
-      <div className="mt-3 rounded-lg border border-dashed border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">
-        Demo: pick a vendor to sign in as. Real vendor logins come next.
-      </div>
+      <h1 className="font-display text-3xl font-bold">Vendor portals</h1>
+      <p className="mt-2 text-sm text-stone-500">As an admin you can open any vendor&apos;s portal.</p>
       <ul className="mt-6 divide-y divide-stone-200 rounded-2xl border border-stone-200 bg-white">
         {vendors.map((v) => (
           <li key={v.id}>

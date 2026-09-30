@@ -17,7 +17,7 @@ part of the order themselves.
 cd marketplace
 npm install
 cp .env.example .env
-npm run setup     # creates the SQLite DB and seeds the launch vendors (sample products)
+npm run setup     # creates the SQLite DB, seeds the launch vendors, and prints demo logins
 npm run dev       # http://localhost:3000
 npm test          # delivery, Shabbat and holiday rule tests
 ```
@@ -38,6 +38,23 @@ Key logic:
 - `src/lib/orders.ts`: re-prices the cart from the database, splits each order into one `VendorOrder` per vendor, and computes commission and vendor payout.
 - `prisma/schema.prisma`: Vendor, Product, Order → VendorOrder → OrderItem.
 
+## Logins
+
+Shoppers check out as guests. Vendors and the Local Legends team sign in at `/login`.
+
+- **Admin**: the admin dashboard, every vendor portal, onboarding vendors, and managing logins.
+- **Vendor**: only their own portal (orders, products, shipping settings, Stripe payouts). Every vendor/admin action re-checks access on the server, so editing a form can't reach another vendor's data.
+
+Create the first admin on a new database:
+
+```bash
+npm run create-user -- you@yourcompany.com admin
+```
+
+It prints a generated password. After that, add vendor logins from **Admin → Logins**. The temporary password is shown once, to pass on to the vendor, who can change it under **Account**. Admins can reset a forgotten password from the same list.
+
+Passwords are hashed with scrypt; sessions are random tokens stored hashed in the database, in an httpOnly cookie that lasts 30 days. Repeated wrong passwords lock an email out for 15 minutes.
+
 ## Turning on Stripe payments
 
 Without keys, checkout runs in demo mode (orders are marked paid, no card is charged).
@@ -49,7 +66,7 @@ Without keys, checkout runs in demo mode (orders are marked paid, no card is cha
 
 ## Not built yet (before launch)
 
-1. **Logins**: vendor and admin pages are open. Add auth (e.g. Supabase Auth) and restrict each vendor to their own data.
+1. **Password reset by email**: for now an admin resets forgotten passwords. The sign-in lockout is per server instance; move it to the database or Redis if you run several servers.
 2. **Refunds**: cancelling a vendor order doesn't refund the customer or reverse the payout yet; do it in the Stripe dashboard for now.
 3. **Emails/SMS**: order confirmation, shipped and delivered notifications.
 4. **Shipping labels**: carrier integration (e.g. Shippo/EasyPost for UPS/FedEx overnight) instead of manual tracking entry.

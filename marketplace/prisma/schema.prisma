@@ -43,6 +43,7 @@ model Vendor {
 
   products     Product[]
   vendorOrders VendorOrder[]
+  users        User[]
 }
 
 model Product {
@@ -126,4 +127,27 @@ model OrderItem {
   name          String
   unitPrice     Int
   quantity      Int
+}
+
+// Someone who can sign in: an admin, or a vendor's staff member.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         String // admin | vendor
+  vendorId     String? // set for vendor users
+  vendor       Vendor?  @relation(fields: [vendorId], references: [id])
+  createdAt    DateTime @default(now())
+
+  sessions Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  // SHA-256 of the cookie token, so a database leak doesn't expose live sessions.
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
