@@ -68,6 +68,9 @@ beforeEach(async () => {
   fake.refunds.create.mockReset().mockResolvedValue({ id: "re_1" });
   fake.transfers.createReversal.mockReset().mockResolvedValue({ id: "trr_1" });
   await db.emailLog.deleteMany();
+  await db.review.deleteMany();
+  await db.productImage.deleteMany();
+  await db.user.deleteMany();
   await db.orderItem.deleteMany();
   await db.vendorOrder.deleteMany();
   await db.order.deleteMany();

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/ProductCard";
+import { Stars } from "@/components/Stars";
 import { db } from "@/lib/db";
 import { mainPhoto } from "@/lib/photos";
 import { formatMoney, vendorLocation } from "@/lib/money";
@@ -22,6 +23,8 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
   });
   if (!vendor || !vendor.active) notFound();
 
+  const ratingCount = vendor.products.reduce((n, p) => n + p.ratingCount, 0);
+  const ratingSum = vendor.products.reduce((n, p) => n + p.ratingSum, 0);
   const cardVendor = { name: vendor.name, city: vendor.city, state: vendor.state, accentColor: vendor.accentColor };
 
   return (
@@ -33,6 +36,11 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
           {vendorLocation(vendor)}
           {vendor.certification && <>{vendorLocation(vendor) && " · "}Kosher certified by <strong>{vendor.certification}</strong></>}
         </p>
+        {ratingCount > 0 && (
+          <p className="mt-2 flex items-center gap-2 text-sm text-stone-700">
+            <Stars rating={ratingSum / ratingCount} /> {(ratingSum / ratingCount).toFixed(1)} from {ratingCount} review{ratingCount === 1 ? "" : "s"}
+          </p>
+        )}
         <p className="mt-4 max-w-2xl text-lg">{vendor.tagline}</p>
         <p className="mt-3 max-w-2xl text-stone-700">{vendor.story}</p>
         <div className="mt-6 flex flex-wrap gap-3 text-sm">

@@ -41,6 +41,18 @@ Key logic:
 - `src/lib/orders.ts`: re-prices the cart from the database, splits each order into one `VendorOrder` per vendor, and computes commission and vendor payout.
 - `prisma/schema.prisma`: Vendor, Product, Order → VendorOrder → OrderItem.
 
+## Reviews
+
+Only customers who bought an item can review it, one review per item, from their order page (the order number
++ email that already protect that page). They're invited by email when the vendor marks the order delivered, and
+can review for 120 days. Reviews show "Verified purchase" with the customer's first name and last initial.
+
+- Stars appear on product cards, vendor pages and product pages, plus schema.org rating data for search results.
+  Totals are kept on each product (`ratingCount`, `ratingSum`) so listings don't recount reviews.
+- Vendors can post one public reply per review from their portal.
+- Admins can hide abusive or off-topic reviews at **Admin → Reviews** (filter by 1–2 stars or hidden). Hidden reviews
+  stop counting toward ratings.
+
 ## Product photos
 
 Vendors add up to 6 photos per product in their portal (the first is the main photo; they can reorder and delete).
@@ -75,6 +87,7 @@ Passwords are hashed with scrypt; sessions are random tokens stored hashed in th
 | Shipped / Out for delivery | Customer | Vendor marks their part "Shipped" (with carrier tracking link) or "Out for delivery" (courier) |
 | Cancelled & refunded | Customer | Vendor (or admin) cancels their part of the order |
 | Priority fee refunded | Customer | Admin refunds the priority fee on a late priority order |
+| How was it? (review request) | Customer | Vendor marks their part "Delivered" |
 
 Each email is sent at most once (a vendor toggling the status back and forth doesn't resend). Every email is kept in **Admin → Emails** with a preview, its status, and a Retry button for failures. A failed email never blocks checkout or order updates.
 

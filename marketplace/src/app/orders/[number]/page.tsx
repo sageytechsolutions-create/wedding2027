@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClearCart } from "@/components/ClearCart";
+import { ReviewForm } from "@/components/ReviewForm";
+import { Stars } from "@/components/Stars";
+import { canReview } from "@/lib/reviews";
 import { StatusBadge } from "@/components/StatusBadge";
 import { db } from "@/lib/db";
 import { formatDeliveryDate, methodLabel } from "@/lib/fulfillment";
@@ -20,7 +23,7 @@ export default async function OrderPage({
   const { email = "" } = await searchParams;
   const order = await db.order.findUnique({
     where: { number },
-    include: { vendorOrders: { include: { vendor: true, items: true } } },
+    include: { vendorOrders: { include: { vendor: true, items: { include: { review: true } } } } },
   });
   // Require the order email so order numbers alone can't be used to look up addresses.
   if (!order || order.email.toLowerCase() !== email.trim().toLowerCase()) notFound();
@@ -96,6 +99,27 @@ export default async function OrderPage({
           </section>
         ))}
       </div>
+
+      {order.paymentStatus === "paid" && order.vendorOrders.some((vo) => canReview(vo)) && (
+        <section id="reviews" className="mt-6 space-y-5 rounded-2xl border border-amber-200 bg-amber-50/50 p-6">
+          <h2 className="font-display text-xl font-bold">How was everything?</h2>
+          {order.vendorOrders
+            .filter((vo) => canReview(vo))
+            .flatMap((vo) => vo.items.map((item) => ({ vo, item })))
+            .map(({ vo, item }) => (
+              <div key={item.id} className="border-t border-amber-200 pt-4 first:border-0 first:pt-0">
+                <p className="text-xs uppercase tracking-wide text-stone-500">{vo.vendor.name}</p>
+                {item.review ? (
+                  <p className="text-sm">
+                    <span className="font-medium">{item.name}</span>: you rated it <Stars rating={item.review.rating} />. Thank you!
+                  </p>
+                ) : (
+                  <ReviewForm number={order.number} email={order.email} orderItemId={item.id} itemName={item.name} />
+                )}
+              </div>
+            ))}
+        </section>
+      )}
 
       <div className="mt-6 grid gap-6 rounded-2xl border border-stone-200 bg-white p-6 sm:grid-cols-2">
         <div className="text-sm">

@@ -11,6 +11,7 @@ import { KOSHER_LABELS, KOSHER_TYPES } from "./kosher";
 import { notifyVendorOrderStatus } from "./notifications";
 import { VENDOR_ORDER_STATUSES } from "./orders";
 import { cancelVendorOrder, refundPriorityFee, type CancelResult } from "./refunds";
+import { replyToReview, reviewInputSchema, setReviewHidden, submitReview } from "./reviews";
 import { siteUrl, stripe } from "./stripe";
 
 // Every export here is a public endpoint, so each one checks who is signed in
@@ -262,4 +263,40 @@ export async function makeMainPhoto(formData: FormData) {
   const first = await db.productImage.findFirst({ where: { productId: image.productId }, orderBy: { position: "asc" } });
   if (first && first.id !== id) await db.productImage.update({ where: { id }, data: { position: first.position - 1 } });
   revalidateProduct(image.product);
+}
+
+// Reviews ---------------------------------------------------------------------------
+
+export type ReviewFormState = { error?: string; done?: boolean } | undefined;
+
+// Customers aren't signed in: the order number + email on the order page authorize the review.
+export async function submitReviewAction(_prev: ReviewFormState, formData: FormData): Promise<ReviewFormState> {
+  const parsed = reviewInputSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const result = await submitReview(parsed.data);
+  if (result.error) return result;
+  const item = await db.orderItem.findUnique({ where: { id: parsed.data.orderItemId }, include: { product: true } });
+  if (item) revalidatePath(`/products/${item.product.slug}`);
+  revalidatePath(`/orders/${parsed.data.number}`);
+  return { done: true };
+}
+
+export async function replyToReviewAction(_prev: ReviewFormState, formData: FormData): Promise<ReviewFormState> {
+  const user = await requireUser("/vendor");
+  const { id, reply } = z.object({ id: z.string(), reply: z.string().max(2000) }).parse(Object.fromEntries(formData));
+  const result = await replyToReview(id, reply, user);
+  if (result.error) return result;
+  const review = await db.review.findUniqueOrThrow({ where: { id }, include: { product: true, vendor: true } });
+  revalidatePath(`/products/${review.product.slug}`);
+  revalidatePath(`/vendor/${review.vendor.slug}`);
+  return { done: true };
+}
+
+export async function setReviewHiddenAction(formData: FormData) {
+  const admin = await requireAdmin("/admin/reviews");
+  const { id, hidden } = z.object({ id: z.string(), hidden: z.enum(["true", "false"]) }).parse(Object.fromEntries(formData));
+  await setReviewHidden(id, hidden === "true", admin);
+  const review = await db.review.findUniqueOrThrow({ where: { id }, include: { product: true } });
+  revalidatePath(`/products/${review.product.slug}`);
+  revalidatePath("/admin/reviews");
 }

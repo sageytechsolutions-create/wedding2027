@@ -2,6 +2,7 @@ import Link from "next/link";
 import { KosherBadges } from "./KosherBadges";
 import { formatMoney, vendorLocation } from "@/lib/money";
 import { productPhotoUrl } from "@/lib/photos";
+import { Stars } from "./Stars";
 
 export interface ProductCardData {
   slug: string;
@@ -10,6 +11,8 @@ export interface ProductCardData {
   emoji: string;
   imageUrl: string | null;
   images?: { id: string }[];
+  ratingCount?: number;
+  ratingSum?: number;
   serves: string | null;
   kosherType: string;
   kosherForPassover: boolean;
@@ -43,6 +46,11 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           {[product.vendor.name, vendorLocation(product.vendor)].filter(Boolean).join(" · ")}
         </p>
         <h3 className="mt-1 font-semibold leading-snug group-hover:text-brand">{product.name}</h3>
+        {product.ratingCount ? (
+          <div className="mt-1 flex items-center gap-1 text-xs text-stone-500">
+            <Stars rating={product.ratingSum! / product.ratingCount} /> ({product.ratingCount})
+          </div>
+        ) : null}
         <div className="mt-2">
           <KosherBadges kosherType={product.kosherType} kosherForPassover={product.kosherForPassover} labels={product.labels} />
         </div>

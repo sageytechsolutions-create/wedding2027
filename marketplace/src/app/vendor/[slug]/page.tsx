@@ -2,6 +2,8 @@ import { site } from "@/lib/config";
 import { notFound } from "next/navigation";
 import { CancelOrderForm } from "@/components/CancelOrderForm";
 import { ProductPhotos } from "@/components/ProductPhotos";
+import { ReviewReplyForm } from "@/components/ReviewReplyForm";
+import { Stars } from "@/components/Stars";
 import { RefundPriorityButton } from "@/components/RefundPriorityButton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { connectStripe, createProduct, toggleProduct, updateVendorOrder, updateVendorSettings } from "@/lib/actions";
@@ -31,6 +33,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
     where: { slug },
     include: {
       products: { orderBy: { createdAt: "desc" }, include: { images: { orderBy: { position: "asc" }, select: { id: true } } } },
+      reviews: { orderBy: { createdAt: "desc" }, take: 30, include: { product: { select: { name: true } } } },
       vendorOrders: {
         // Unpaid checkouts never reach the vendor.
         where: { order: { paymentStatus: "paid" } },
@@ -124,8 +127,8 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
                 <span className="ml-auto text-sm text-stone-500">Payout {formatMoney(vo.vendorPayout)}</span>
                 <p className="w-full text-xs text-stone-500">
                   {vo.method === "local_delivery"
-                    ? "Marking it “Out for delivery” emails the customer."
-                    : "Enter the carrier and tracking number, then mark it “Shipped”. The customer gets one email with the tracking link."}
+                    ? "Marking it “Out for delivery” emails the customer. Mark it “Delivered” once it arrives so they're asked for a review."
+                    : "Enter the carrier and tracking number, then mark it “Shipped”. The customer gets one email with the tracking link. Mark it “Delivered” once it arrives so they're asked for a review."}
                 </p>
               </form>
               {/* Vendors can cancel until it's on its way; admins at any time (e.g. lost in transit). */}
@@ -200,6 +203,30 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
             <button className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white sm:justify-self-end">Add product</button>
           </form>
         </details>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold">Reviews</h2>
+        {vendor.reviews.length === 0 ? (
+          <p className="mt-3 text-stone-500">No reviews yet. Customers are asked for one when you mark an order delivered.</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-stone-100 rounded-2xl border border-stone-200 bg-white">
+            {vendor.reviews.map((r) => (
+              <li key={r.id} className={`space-y-2 px-5 py-4 ${r.hidden ? "opacity-50" : ""}`}>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <Stars rating={r.rating} />
+                  <span className="font-medium">{r.product.name}</span>
+                  <span className="text-stone-500">· {r.authorName} · {r.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                  {r.hidden && <span className="text-xs text-stone-500">(hidden by Local Legends)</span>}
+                </div>
+                {r.title && <p className="font-semibold">{r.title}</p>}
+                <p className="whitespace-pre-line text-sm text-stone-700">{r.body}</p>
+                {r.vendorReply && <p className="rounded-lg bg-stone-100 p-2 text-sm">Your reply: {r.vendorReply}</p>}
+                <ReviewReplyForm reviewId={r.id} existing={r.vendorReply} />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section>

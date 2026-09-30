@@ -334,3 +334,33 @@ ${button(d.orderUrl, "View your order")}`,
 
   return { subject: `Priority fee refunded: ${formatMoney(d.amount)} (${d.number})`, html, text };
 }
+
+// --- Customer: delivered, please review ---------------------------------------------
+
+export interface ReviewRequestData {
+  number: string;
+  reviewUrl: string;
+  customerName: string;
+  vendorName: string;
+  items: Item[];
+}
+
+export function reviewRequestEmail(d: ReviewRequestData): Rendered {
+  const html = layout(
+    `How was your order from ${d.vendorName}?`,
+    `<h1 style="font-family:Georgia,serif;font-size:24px;margin:0 0 8px">How was it?</h1>
+<p style="margin:0">Hi ${e(firstName(d.customerName))}, your order from <strong>${e(d.vendorName)}</strong> has been delivered. We hope you loved it!</p>
+<table role="presentation" width="100%" style="font-size:14px;margin:16px 0">${itemRows(d.items)}</table>
+<p style="margin:0">A quick review helps other customers, and means a lot to a small kitchen.</p>
+${button(d.reviewUrl, "★ Leave a review")}`,
+  );
+  const text = [
+    `How was it? Your order from ${d.vendorName} has been delivered.`,
+    "",
+    itemLines(d.items),
+    "",
+    "A quick review helps other customers, and means a lot to a small kitchen.",
+    `Leave a review: ${d.reviewUrl}`,
+  ].join("\n");
+  return { subject: `How was your ${d.vendorName} order? (${d.number})`, html, text };
+}

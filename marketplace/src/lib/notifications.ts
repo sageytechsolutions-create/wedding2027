@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { sendEmail } from "./email/send";
-import { orderConfirmationEmail, priorityRefundEmail, refundEmail, shippedEmail, vendorNewOrderEmail } from "./email/templates";
+import { orderConfirmationEmail, priorityRefundEmail, refundEmail, reviewRequestEmail, shippedEmail, vendorNewOrderEmail } from "./email/templates";
 import { siteUrl } from "./stripe";
 import { trackingUrl } from "./tracking";
 
@@ -56,14 +56,26 @@ export async function notifyOrderPaid(orderId: string) {
   }
 }
 
-// When a vendor marks their part shipped (carrier) or out for delivery (courier).
+// When a vendor marks their part shipped (carrier), out for delivery (courier), or delivered (asks for a review).
 export async function notifyVendorOrderStatus(vendorOrderId: string) {
   const vo = await db.vendorOrder.findUniqueOrThrow({
     where: { id: vendorOrderId },
     include: { order: true, vendor: true, items: { include: { product: { select: { perishable: true } } } } },
   });
-  if (vo.status !== "shipped" && vo.status !== "out_for_delivery") return;
   if (vo.order.paymentStatus !== "paid") return;
+
+  if (vo.status === "delivered") {
+    const email = reviewRequestEmail({
+      number: vo.order.number,
+      reviewUrl: `${orderUrl(vo.order)}#reviews`,
+      customerName: vo.order.name,
+      vendorName: vo.vendor.name,
+      items: vo.items,
+    });
+    await sendEmail({ key: `review-request:${vo.id}`, to: vo.order.email, ...email });
+    return;
+  }
+  if (vo.status !== "shipped" && vo.status !== "out_for_delivery") return;
 
   const email = shippedEmail({
     number: vo.order.number,

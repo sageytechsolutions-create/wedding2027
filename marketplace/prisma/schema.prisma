@@ -47,6 +47,7 @@ model Vendor {
   products     Product[]
   vendorOrders VendorOrder[]
   users        User[]
+  reviews      Review[]
 }
 
 model Product {
@@ -72,6 +73,10 @@ model Product {
 
   orderItems OrderItem[]
   images     ProductImage[]
+  reviews    Review[]
+  // Running totals of published reviews, for showing stars without counting every time.
+  ratingCount Int @default(0)
+  ratingSum   Int @default(0)
 }
 
 // What the customer places and pays for. Split into one VendorOrder per vendor.
@@ -145,6 +150,7 @@ model OrderItem {
   name          String
   unitPrice     Int
   quantity      Int
+  review        Review?
 }
 
 // Someone who can sign in: an admin, or a vendor's staff member.
@@ -207,4 +213,26 @@ model ProductImage {
   createdAt DateTime @default(now())
 
   @@index([productId, position])
+}
+
+// A verified-purchase review: one per item a customer bought.
+model Review {
+  id           String    @id @default(cuid())
+  orderItemId  String    @unique
+  orderItem    OrderItem @relation(fields: [orderItemId], references: [id])
+  productId    String
+  product      Product   @relation(fields: [productId], references: [id])
+  vendorId     String
+  vendor       Vendor    @relation(fields: [vendorId], references: [id])
+  rating       Int // 1-5
+  title        String?
+  body         String
+  authorName   String // e.g. "Dana L."
+  hidden       Boolean   @default(false) // hidden by an admin (abusive, off-topic)
+  vendorReply   String?
+  vendorReplyAt DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([productId, hidden, createdAt])
+  @@index([vendorId, createdAt])
 }

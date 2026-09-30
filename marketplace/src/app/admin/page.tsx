@@ -72,7 +72,10 @@ export default async function AdminPage() {
       <div>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="font-display text-3xl font-bold">Marketplace admin</h1>
-          <Link href="/admin/emails" className="text-sm font-medium text-brand">Emails →</Link>
+          <span className="flex gap-4">
+            <Link href="/admin/reviews" className="text-sm font-medium text-brand">Reviews →</Link>
+            <Link href="/admin/emails" className="text-sm font-medium text-brand">Emails →</Link>
+          </span>
         </div>
 
       </div>

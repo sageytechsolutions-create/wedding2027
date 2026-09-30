@@ -124,9 +124,13 @@ async function main() {
       process.exit(1);
     }
   }
+  // Children before parents, so foreign keys never block the wipe.
   await db.emailLog.deleteMany();
+  await db.loginThrottle.deleteMany();
   await db.session.deleteMany();
   await db.user.deleteMany();
+  await db.review.deleteMany();
+  await db.productImage.deleteMany();
   await db.orderItem.deleteMany();
   await db.vendorOrder.deleteMany();
   await db.order.deleteMany();
