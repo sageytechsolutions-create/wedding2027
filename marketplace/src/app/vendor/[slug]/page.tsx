@@ -1,3 +1,4 @@
+import { site } from "@/lib/config";
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/StatusBadge";
 import { connectStripe, createProduct, refreshStripeStatus, toggleProduct, updateVendorOrder, updateVendorSettings } from "@/lib/actions";
@@ -192,7 +193,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
           <input type="hidden" name="slug" value={vendor.slug} />
           <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 sm:col-span-2">
             {vendor.courierPickup
-              ? "🚚 The KosherValet courier picks up your local NYC orders and delivers them next day. Just have them packed by pickup."
+              ? `🚚 The ${site.name} courier picks up your local NYC orders and delivers them next day. Just have them packed by pickup.`
               : "Local courier pickup isn't set up for your location, so all orders ship."}
           </p>
           <label className="text-sm">
@@ -218,7 +219,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
           <label className="flex items-center gap-2 self-end text-sm">
             <input type="checkbox" name="shipsNationwide" defaultChecked={vendor.shipsNationwide} /> Ship nationwide
           </label>
-          <p className="text-sm text-stone-500 sm:col-span-2">Platform commission: {Math.round(vendor.commissionRate * 100)}% of item sales. You keep shipping and priority fees for orders you ship; local courier fees go to KosherValet.</p>
+          <p className="text-sm text-stone-500 sm:col-span-2">Platform commission: {Math.round(vendor.commissionRate * 100)}% of item sales. You keep shipping and priority fees for orders you ship; local courier fees go to {site.name}.</p>
           <button className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white sm:col-span-2 sm:justify-self-start">Save settings</button>
         </form>
       </section>

@@ -20,7 +20,7 @@ export default async function HomePage() {
       <section className="rounded-3xl bg-gradient-to-br from-orange-100 via-amber-50 to-rose-100 px-6 py-14 text-center sm:px-12">
         <h1 className="font-display text-4xl font-bold sm:text-5xl">{site.tagline}</h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-stone-600">
-          Certified kosher delis, bakeries and grills from across the country. Next-day delivery if you&apos;re local, overnight shipping everywhere else. Never on Shabbat.
+          Certified kosher markets, bakeries and specialty shops. Next-day delivery in NYC, overnight or 2-day shipping everywhere else. Never on Shabbat.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link href="/shop" className="rounded-full bg-brand px-6 py-3 font-medium text-white hover:bg-brand-dark">Shop all food</Link>
@@ -50,7 +50,7 @@ export default async function HomePage() {
       </section>
 
       <section>
-        <h2 className="font-display text-2xl font-bold">Our kosher kitchens</h2>
+        <h2 className="font-display text-2xl font-bold">Meet the legends</h2>
         <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {vendors.map((v) => (
             <Link key={v.id} href={`/vendors/${v.slug}`} className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white p-5 hover:shadow-md">

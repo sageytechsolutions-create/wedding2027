@@ -25,7 +25,7 @@ interface CartContextValue {
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
-const STORAGE_KEY = "kosher-valet-cart-v1";
+const STORAGE_KEY = "local-legends-cart-v1";
 const MAX_QTY = 20;
 
 export function CartProvider({ children }: { children: React.ReactNode }) {

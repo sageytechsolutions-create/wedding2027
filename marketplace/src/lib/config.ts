@@ -1,7 +1,7 @@
 // Brand and platform-wide settings. Times are in `timeZone`.
 export const site = {
-  name: "KosherValet",
-  tagline: "The best kosher food in America, delivered to your door.",
+  name: "Local Legends",
+  tagline: "Iconic kosher favorites from local legends, delivered nationwide.",
   supportEmail: "support@example.com",
   timeZone: "America/New_York",
   // Orders placed before this hour count as placed today.
@@ -15,7 +15,7 @@ export const site = {
 };
 
 // Local deliveries are made by one shared courier service for every vendor,
-// so the fees are set platform-wide and kept by KosherValet to pay the courier.
+// so the fees are set platform-wide and kept by the platform to pay the courier.
 export const localDelivery = {
   fee: 999, // cents
   priorityFee: 999, // cents, pre-Yom Tov same-day/guaranteed delivery

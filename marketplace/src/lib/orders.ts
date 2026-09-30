@@ -90,7 +90,7 @@ export async function quoteCart(items: z.infer<typeof cartLineSchema>[], zip: st
 }
 
 function orderNumber(): string {
-  return `KV-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 1296).toString(36).toUpperCase().padStart(2, "0")}`;
+  return `LL-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 1296).toString(36).toUpperCase().padStart(2, "0")}`;
 }
 
 export class CheckoutError extends Error {}

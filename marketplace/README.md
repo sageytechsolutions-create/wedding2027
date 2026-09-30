@@ -1,4 +1,4 @@
-# KosherValet: multi-vendor kosher food marketplace
+# Local Legends: multi-vendor kosher food marketplace
 
 A Goldbelly-style marketplace for kosher food. Many certified vendors (delis, bakeries, grills) list
 products; a customer buys from any of them in one checkout; each vendor ships their
