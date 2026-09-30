@@ -19,7 +19,7 @@ npm install
 cp .env.example .env
 npm run setup     # creates the SQLite DB, seeds the launch vendors, and prints demo logins
 npm run dev       # http://localhost:3000
-npm test          # delivery, Shabbat and holiday rule tests
+npm test          # delivery, holiday, email and refund tests (uses a throwaway prisma/test.db)
 ```
 
 ## What's here
@@ -62,10 +62,21 @@ Passwords are hashed with scrypt; sessions are random tokens stored hashed in th
 | Order confirmed | Customer | Payment succeeds (or at checkout in demo mode) |
 | New order | Each login for that vendor | Same time; flags ⚡ priority orders, shows ship-by date and payout |
 | Shipped / Out for delivery | Customer | Vendor marks their part "Shipped" (with carrier tracking link) or "Out for delivery" (courier) |
+| Cancelled & refunded | Customer | Vendor (or admin) cancels their part of the order |
 
 Each email is sent at most once (a vendor toggling the status back and forth doesn't resend). Every email is kept in **Admin → Emails** with a preview, its status, and a Retry button for failures. A failed email never blocks checkout or order updates.
 
 To actually send them, create a [Resend](https://resend.com) account, verify your domain, and set `RESEND_API_KEY` and `EMAIL_FROM` (an address on that domain) in `.env`. Without a key, emails are saved to the outbox only.
+
+## Cancellations and refunds
+
+Each vendor's part of an order can be cancelled on its own with **Cancel & refund** in the vendor portal. The vendor gives a reason, which is emailed to the customer.
+
+- **Who**: vendors until the order is on its way (Pending / Preparing); admins at any time, e.g. a package lost in transit.
+- **Refund**: the customer gets that shipment's full amount back (items + delivery, including any priority fee) on their card through Stripe. Other vendors' parts of the order are unaffected.
+- **Vendor payout**: if the vendor was already paid, the payout is pulled back from their Stripe account automatically. If that fails, the customer is still refunded and the admin dashboard lists the payout to reverse by hand.
+- **Safety**: the refund happens first, and nothing changes if it fails. Stripe calls use idempotency keys and the database only records a cancellation once, so double clicks or retries never refund twice. Cancelled shipments can't be reopened.
+- Stripe doesn't return its processing fee on refunds, so the platform absorbs it.
 
 ## Turning on Stripe payments
 
@@ -79,7 +90,7 @@ Without keys, checkout runs in demo mode (orders are marked paid, no card is cha
 ## Not built yet (before launch)
 
 1. **Password reset by email**: for now an admin resets forgotten passwords. The sign-in lockout is per server instance; move it to the database or Redis if you run several servers.
-2. **Refunds**: cancelling a vendor order doesn't refund the customer or reverse the payout yet; do it in the Stripe dashboard for now.
+2. **Partial refunds**: refunding a single item (rather than a vendor's whole shipment), or a goodwill credit, is done in the Stripe dashboard for now.
 3. **More notifications**: "delivered" emails, SMS, and password-reset emails.
 4. **Shipping labels**: carrier integration (e.g. Shippo/EasyPost for UPS/FedEx overnight) instead of manual tracking entry.
 5. **Production DB**: switch the Prisma provider to `postgresql` (Supabase) and make search case-insensitive with `mode: "insensitive"`.

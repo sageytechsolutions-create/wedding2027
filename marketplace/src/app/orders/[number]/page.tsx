@@ -64,7 +64,14 @@ export default async function OrderPage({
               </span>
             </div>
             <p className="mt-1 text-sm text-stone-600">
-              {methodLabel(vo.method)}. Arrives <strong>{formatDeliveryDate(vo.deliveryDate)}</strong>
+              {vo.status === "cancelled" ? (
+                <span className="text-red-700">
+                  Cancelled by the shop{vo.cancelReason && <> (&ldquo;{vo.cancelReason}&rdquo;)</>}. Refunded <strong>{formatMoney(vo.refundAmount ?? 0)}</strong>
+                  {order.stripePaymentIntentId && " to your card"}.
+                </span>
+              ) : (
+                <>{methodLabel(vo.method)}. Arrives <strong>{formatDeliveryDate(vo.deliveryDate)}</strong></>
+              )}
             </p>
             {vo.trackingNumber && (
               <p className="mt-1 text-sm text-stone-600">Tracking: {vo.carrier} {vo.trackingNumber}</p>
@@ -99,6 +106,12 @@ export default async function OrderPage({
           <div className="flex justify-between"><span>Subtotal</span><span>{formatMoney(order.subtotal)}</span></div>
           <div className="flex justify-between"><span>Shipping</span><span>{formatMoney(order.shippingTotal)}</span></div>
           <div className="flex justify-between border-t border-stone-200 pt-2 font-semibold"><span>Total</span><span>{formatMoney(order.total)}</span></div>
+          {order.refundedAmount > 0 && (
+            <>
+              <div className="flex justify-between text-red-700"><span>Refunded</span><span>−{formatMoney(order.refundedAmount)}</span></div>
+              <div className="flex justify-between font-semibold"><span>You paid</span><span>{formatMoney(order.total - order.refundedAmount)}</span></div>
+            </>
+          )}
         </div>
       </div>
 

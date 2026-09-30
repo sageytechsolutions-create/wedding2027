@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { sendEmail } from "./email/send";
-import { orderConfirmationEmail, shippedEmail, vendorNewOrderEmail } from "./email/templates";
+import { orderConfirmationEmail, refundEmail, shippedEmail, vendorNewOrderEmail } from "./email/templates";
 import { siteUrl } from "./stripe";
 import { trackingUrl } from "./tracking";
 
@@ -81,4 +81,21 @@ export async function notifyVendorOrderStatus(vendorOrderId: string) {
   });
   // One "on its way" email per shipment, even if the status is toggled back and forth.
   await sendEmail({ key: `shipped:${vo.id}`, to: vo.order.email, ...email });
+}
+
+// When a shipment is cancelled and refunded.
+export async function notifyRefund(vendorOrderId: string) {
+  const vo = await db.vendorOrder.findUniqueOrThrow({ where: { id: vendorOrderId }, include: { order: true, vendor: true, items: true } });
+  if (vo.status !== "cancelled" || vo.refundAmount == null) return;
+  const email = refundEmail({
+    number: vo.order.number,
+    orderUrl: orderUrl(vo.order),
+    customerName: vo.order.name,
+    vendorName: vo.vendor.name,
+    items: vo.items,
+    amount: vo.refundAmount,
+    reason: vo.cancelReason ?? "",
+    toCard: vo.order.stripePaymentIntentId != null,
+  });
+  await sendEmail({ key: `refund:${vo.id}`, to: vo.order.email, ...email });
 }

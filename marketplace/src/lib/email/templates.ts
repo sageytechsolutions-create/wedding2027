@@ -247,3 +247,51 @@ ${button(d.portalUrl, "Open your vendor portal")}`,
 
   return { subject: `${d.priority ? "⚡ Priority " : ""}New order ${d.number}: ${due}`, html, text };
 }
+
+// --- Customer: part of the order cancelled and refunded ------------------------------
+
+export interface RefundData {
+  number: string;
+  orderUrl: string;
+  customerName: string;
+  vendorName: string;
+  items: Item[];
+  amount: number;
+  reason: string;
+  // false in demo mode, when no card was charged
+  toCard: boolean;
+}
+
+export function refundEmail(d: RefundData): Rendered {
+  const headline = `Your ${d.vendorName} order was cancelled`;
+  const refundLine = d.toCard
+    ? `We've refunded ${formatMoney(d.amount)} to your original payment method. It usually appears within 5–10 business days.`
+    : `You won't be charged ${formatMoney(d.amount)} for it.`;
+
+  const html = layout(
+    `${headline}. ${refundLine}`,
+    `<h1 style="font-family:Georgia,serif;font-size:24px;margin:0 0 8px">${e(headline)}</h1>
+<p style="margin:0">Hi ${e(firstName(d.customerName))}, we're sorry. ${e(d.vendorName)} couldn't fulfill their part of order <strong>${e(d.number)}</strong>.</p>
+${d.reason ? `<p style="margin:12px 0 0;color:#57534e">Reason: ${e(d.reason)}</p>` : ""}
+<table role="presentation" width="100%" style="font-size:14px;margin:16px 0">${itemRows(d.items)}</table>
+<p style="margin:0;padding:12px 14px;background:#ecfdf5;border-radius:10px;color:#065f46"><strong>${e(refundLine)}</strong></p>
+<p style="margin:16px 0 0">Anything else in your order from other shops is not affected and will arrive as scheduled.</p>
+${button(d.orderUrl, "View your order")}`,
+  );
+
+  const text = [
+    `${headline}.`,
+    "",
+    `Hi ${firstName(d.customerName)}, we're sorry. ${d.vendorName} couldn't fulfill their part of order ${d.number}.`,
+    ...(d.reason ? [`Reason: ${d.reason}`] : []),
+    "",
+    itemLines(d.items),
+    "",
+    refundLine,
+    "Anything else in your order from other shops is not affected and will arrive as scheduled.",
+    "",
+    `View your order: ${d.orderUrl}`,
+  ].join("\n");
+
+  return { subject: `${headline}: ${formatMoney(d.amount)} refunded (${d.number})`, html, text };
+}

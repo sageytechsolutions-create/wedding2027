@@ -259,8 +259,8 @@ export const VENDOR_ORDER_STATUSES = [
   "shipped",
   "out_for_delivery",
   "delivered",
-  "cancelled",
 ] as const;
+// "cancelled" is set only through cancel-and-refund (src/lib/refunds.ts), never from the status dropdown.
 
 export function statusLabel(status: string): string {
   return status.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());

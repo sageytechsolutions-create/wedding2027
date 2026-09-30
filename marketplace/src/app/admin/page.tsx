@@ -13,7 +13,7 @@ const field = "rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm";
 
 export default async function AdminPage() {
   const admin = await requireAdmin();
-  const [vendors, recent, totals, users] = await Promise.all([
+  const [vendors, recent, totals, users, refunds, unreversed] = await Promise.all([
     db.vendor.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -28,6 +28,12 @@ export default async function AdminPage() {
       _count: true,
     }),
     db.user.findMany({ orderBy: [{ role: "asc" }, { email: "asc" }], include: { vendor: { select: { name: true } } } }),
+    db.vendorOrder.aggregate({ where: { status: "cancelled" }, _sum: { refundAmount: true }, _count: true }),
+    // Customer refunded, but the vendor had already been paid and pulling it back failed.
+    db.vendorOrder.findMany({
+      where: { status: "cancelled", stripeTransferId: { not: null }, stripeTransferReversalId: null, stripeRefundId: { not: null } },
+      include: { order: true, vendor: true },
+    }),
   ]);
 
   const stats = [
@@ -36,6 +42,7 @@ export default async function AdminPage() {
     ["Platform revenue", formatMoney((totals._sum.subtotal ?? 0) + (totals._sum.shippingFee ?? 0) - (totals._sum.vendorPayout ?? 0))],
     ["Owed to vendors", formatMoney(totals._sum.vendorPayout ?? 0)],
     ["Vendor shipments", String(totals._count)],
+    [`Refunded (${refunds._count} cancelled)`, formatMoney(refunds._sum.refundAmount ?? 0)],
   ];
 
   return (
@@ -48,7 +55,7 @@ export default async function AdminPage() {
 
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map(([label, value]) => (
           <div key={label} className="rounded-2xl border border-stone-200 bg-white p-5">
             <p className="text-sm text-stone-500">{label}</p>
@@ -56,6 +63,20 @@ export default async function AdminPage() {
           </div>
         ))}
       </div>
+
+      {unreversed.length > 0 && (
+        <section className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">
+          <h2 className="font-semibold">Vendor payouts to pull back in Stripe</h2>
+          <p className="mt-1">These customers were refunded, but the vendor had already been paid and the automatic reversal failed. Reverse the transfer in the Stripe dashboard.</p>
+          <ul className="mt-2 list-disc pl-5">
+            {unreversed.map((vo) => (
+              <li key={vo.id}>
+                {vo.order.number} · {vo.vendor.name} · {formatMoney(vo.vendorPayout)} · transfer {vo.stripeTransferId}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section>
         <h2 className="text-xl font-semibold">Vendors ({vendors.length})</h2>

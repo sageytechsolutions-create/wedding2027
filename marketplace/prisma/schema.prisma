@@ -86,7 +86,8 @@ model Order {
   subtotal      Int
   shippingTotal Int
   total         Int
-  paymentStatus String   @default("pending") // pending | paid | expired | refunded
+  paymentStatus String   @default("pending") // pending | paid | expired ("paid" = money collected, even if later partly refunded)
+  refundedAmount Int     @default(0) // cents refunded so far across cancelled shipments
   stripeSessionId       String? @unique
   stripePaymentIntentId String?
   createdAt     DateTime @default(now())
@@ -113,6 +114,13 @@ model VendorOrder {
   status           String    @default("pending") // pending | preparing | shipped | out_for_delivery | delivered | cancelled
   trackingNumber   String?
   carrier          String?
+  // Set when the vendor (or an admin) cancels this shipment and the customer is refunded for it.
+  cancelledAt          DateTime?
+  cancelledBy          String? // email of who cancelled
+  cancelReason         String?
+  refundAmount         Int? // cents: this shipment's items + delivery
+  stripeRefundId       String?
+  stripeTransferReversalId String?
   updatedAt        DateTime  @updatedAt
 
   items OrderItem[]

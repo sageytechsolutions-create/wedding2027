@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireAdmin, requireVendorAccess } from "./auth";
+import { requireAdmin, requireUser, requireVendorAccess } from "./auth";
 import { db } from "./db";
 import { isInCourierArea } from "./fulfillment";
 import { deliver } from "./email/send";
 import { KOSHER_LABELS, KOSHER_TYPES } from "./kosher";
 import { notifyVendorOrderStatus } from "./notifications";
 import { VENDOR_ORDER_STATUSES } from "./orders";
+import { cancelVendorOrder, type CancelResult } from "./refunds";
 import { siteUrl, stripe } from "./stripe";
 
 // Every export here is a public endpoint, so each one checks who is signed in
@@ -32,6 +33,7 @@ export async function updateVendorOrder(formData: FormData) {
     .parse(Object.fromEntries(formData));
   const vendorOrder = await db.vendorOrder.findUniqueOrThrow({ where: { id: data.id }, include: { vendor: true } });
   await requireVendorAccess(vendorOrder.vendorId);
+  if (vendorOrder.status === "cancelled") return; // cancelled and refunded; can't be reopened
   await db.vendorOrder.update({
     where: { id: data.id },
     data: { status: data.status, carrier: data.carrier || null, trackingNumber: data.trackingNumber || null },
@@ -205,4 +207,19 @@ export async function retryEmail(formData: FormData) {
   const log = await db.emailLog.findUniqueOrThrow({ where: { id } });
   if (log.status !== "sent") await deliver(log);
   revalidatePath("/admin/emails");
+}
+
+// Cancel one vendor's part of an order and refund the customer for it.
+export async function cancelOrderAction(_prev: CancelResult | undefined, formData: FormData): Promise<CancelResult> {
+  const user = await requireUser("/vendor");
+  const parsed = z
+    .object({ id: z.string().min(1), reason: z.string().trim().min(3, "Please give the customer a short reason.").max(300) })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { id, reason } = parsed.data;
+  const result = await cancelVendorOrder(id, reason, user);
+  const vo = await db.vendorOrder.findUnique({ where: { id }, include: { vendor: true } });
+  if (vo) revalidatePath(`/vendor/${vo.vendor.slug}`);
+  revalidatePath("/admin");
+  return result;
 }

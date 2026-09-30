@@ -1,9 +1,11 @@
 import { site } from "@/lib/config";
 import { notFound } from "next/navigation";
+import { CancelOrderForm } from "@/components/CancelOrderForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { connectStripe, createProduct, toggleProduct, updateVendorOrder, updateVendorSettings } from "@/lib/actions";
 import { requireVendorAccess } from "@/lib/auth";
 import { refreshStripeStatus } from "@/lib/payouts";
+import { VENDOR_CANCELLABLE } from "@/lib/refunds";
 import { db } from "@/lib/db";
 import { formatDeliveryDate, methodLabel } from "@/lib/fulfillment";
 import { formatMoney } from "@/lib/money";
@@ -19,7 +21,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const found = await db.vendor.findUnique({ where: { slug }, select: { id: true, stripeAccountId: true, stripePayoutsEnabled: true } });
   if (!found) notFound();
-  await requireVendorAccess(found.id, `/vendor/${slug}`);
+  const user = await requireVendorAccess(found.id, `/vendor/${slug}`);
   // Coming back from Stripe onboarding: pick up the new status and pay out anything owed.
   if (found.stripeAccountId && !found.stripePayoutsEnabled) await refreshStripeStatus(found.id);
 
@@ -94,6 +96,14 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
                   {vo.order.giftMessage && <><br /><em>Gift note: &ldquo;{vo.order.giftMessage}&rdquo;</em></>}
                 </p>
               </div>
+              {vo.status === "cancelled" ? (
+                <p className="mt-4 border-t border-stone-100 pt-4 text-sm text-stone-600">
+                  Cancelled{vo.cancelledAt && ` ${vo.cancelledAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`} · customer refunded{" "}
+                  <strong>{formatMoney(vo.refundAmount ?? 0)}</strong>
+                  {vo.cancelReason && <> · &ldquo;{vo.cancelReason}&rdquo;</>}
+                </p>
+              ) : (
+              <>
               <form action={updateVendorOrder} className="mt-4 flex flex-wrap items-center gap-2 border-t border-stone-100 pt-4">
                 <input type="hidden" name="id" value={vo.id} />
                 <select name="status" defaultValue={vo.status} className={field}>
@@ -113,6 +123,18 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
                     : "Enter the carrier and tracking number, then mark it “Shipped”. The customer gets one email with the tracking link."}
                 </p>
               </form>
+              {/* Vendors can cancel until it's on its way; admins at any time (e.g. lost in transit). */}
+              {(user.role === "admin" || VENDOR_CANCELLABLE.includes(vo.status)) && (
+                <div className="mt-3">
+                  <CancelOrderForm
+                    vendorOrderId={vo.id}
+                    amount={vo.subtotal + vo.shippingFee}
+                    onTheWay={!VENDOR_CANCELLABLE.includes(vo.status)}
+                  />
+                </div>
+              )}
+              </>
+              )}
             </div>
           ))}
         </div>
