@@ -58,7 +58,7 @@ export default async function EmailsPage({ searchParams }: { searchParams: Promi
                   <div className="font-medium">{selected.subject}</div>
                   <div className="text-stone-500">To {selected.to}</div>
                 </div>
-                {configured && selected.status !== "sent" && (
+                {configured && selected.status !== "sent" && !selected.sensitive && (
                   <form action={retryEmail}>
                     <input type="hidden" name="id" value={selected.id} />
                     <button className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-medium text-white">

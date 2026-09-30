@@ -38,8 +38,8 @@ export function ReviewForm({ number, email, orderItemId, itemName }: { number: s
       </fieldset>
       {rating > 0 && (
         <>
-          <input name="title" maxLength={80} placeholder="Headline (optional)" className={field} />
-          <textarea name="body" required minLength={10} maxLength={2000} rows={3} placeholder="What did you think? How was the taste, the packaging, the delivery?" className={field} />
+          <input key={`t${state?.title}`} name="title" maxLength={80} defaultValue={state?.title} placeholder="Headline (optional)" className={field} />
+          <textarea key={`b${state?.body}`} name="body" defaultValue={state?.body} required minLength={10} maxLength={2000} rows={3} placeholder="What did you think? How was the taste, the packaging, the delivery?" className={field} />
           {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
           <button disabled={pending} className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
             {pending ? "Posting…" : "Post review"}

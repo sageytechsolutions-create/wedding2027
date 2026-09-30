@@ -164,7 +164,8 @@ model User {
   vendor       Vendor?  @relation(fields: [vendorId], references: [id])
   createdAt    DateTime @default(now())
 
-  sessions Session[]
+  sessions       Session[]
+  passwordResets PasswordReset[]
 }
 
 model Session {
@@ -187,6 +188,8 @@ model EmailLog {
   html      String
   text      String
   status    String // sent | outbox (no provider configured) | failed
+  // Contained a secret (e.g. a password reset link) that was removed from the stored copy.
+  sensitive Boolean  @default(false)
   error     String?
   createdAt DateTime @default(now())
 }
@@ -236,4 +239,17 @@ model Review {
 
   @@index([productId, hidden, createdAt])
   @@index([vendorId, createdAt])
+}
+
+// Single-use password reset links. Only a hash of the token is stored.
+model PasswordReset {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
 }

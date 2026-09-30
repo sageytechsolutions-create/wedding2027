@@ -380,3 +380,24 @@ ${button(d.reviewUrl, "★ Leave a review")}
 
   return { subject: `Delivered: your ${d.vendorName} order (${d.number})`, html, text };
 }
+
+// --- Partner: password reset ---------------------------------------------------------
+
+export function passwordResetEmail(d: { resetUrl: string; minutes: number }): Rendered {
+  const html = layout(
+    "Reset your password",
+    `<h1 style="font-family:Georgia,serif;font-size:24px;margin:0 0 8px">Reset your password</h1>
+<p style="margin:0">Someone (hopefully you) asked to reset the password for your ${e(site.name)} partner account.</p>
+${button(d.resetUrl, "Choose a new password")}
+<p style="margin:0;font-size:13px;color:#78716c">This link works once and expires in ${d.minutes} minutes. If you didn't ask for this, you can ignore this email; your password won't change.</p>`,
+  );
+  const text = [
+    `Reset your ${site.name} password`,
+    "",
+    "Someone (hopefully you) asked to reset the password for your partner account.",
+    `Choose a new password: ${d.resetUrl}`,
+    "",
+    `This link works once and expires in ${d.minutes} minutes. If you didn't ask for this, ignore this email; your password won't change.`,
+  ].join("\n");
+  return { subject: `Reset your ${site.name} password`, html, text };
+}

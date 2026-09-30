@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/LoginForm";
 import { getCurrentUser } from "@/lib/auth";
@@ -20,7 +21,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </p>
       )}
       <LoginForm next={next} />
-      <p className="mt-6 text-center text-sm text-stone-500">Forgot your password? Ask a Local Legends admin to reset it.</p>
+      <p className="mt-6 text-center text-sm">
+        <Link href="/forgot-password" className="text-brand">Forgot your password?</Link>
+      </p>
     </div>
   );
 }

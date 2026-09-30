@@ -14,8 +14,10 @@ import {
 } from "./auth";
 import { db } from "./db";
 import { MIN_PASSWORD_LENGTH, generatePassword, hashPassword, verifyPassword } from "./password";
+import { requestPasswordReset, resetPassword } from "./password-reset";
 
-export type FormState = { error?: string; message?: string; password?: string } | undefined;
+// `email` is echoed back so the form can keep what was typed after an error.
+export type FormState = { error?: string; message?: string; password?: string; email?: string } | undefined;
 
 // Only allow redirects back into this site after signing in.
 function safeNext(next: unknown, fallback: string): string {
@@ -28,14 +30,14 @@ let dummyHash: Promise<string> | undefined;
 export async function login(_prev: FormState, formData: FormData): Promise<FormState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (await isLockedOut(email)) return { error: "Too many attempts. Try again in 15 minutes." };
+  if (await isLockedOut(email)) return { error: "Too many attempts. Try again in 15 minutes.", email };
 
   const user = await db.user.findUnique({ where: { email }, include: { vendor: { select: { slug: true } } } });
   // Always run a hash check so response time doesn't reveal whether the email exists.
   const ok = await verifyPassword(password, user?.passwordHash ?? (await (dummyHash ??= hashPassword("not-a-real-password"))));
   if (!user || !ok) {
     await recordFailure(email);
-    return { error: "Incorrect email or password." };
+    return { error: "Incorrect email or password.", email };
   }
   await clearFailures(email);
   await startSession(user.id);
@@ -104,3 +106,21 @@ export async function deleteUser(formData: FormData) {
   revalidatePath("/admin");
 }
 
+
+// Always gives the same answer, so the page can't be used to find out who has an account.
+export async function forgotPassword(_prev: FormState, formData: FormData): Promise<FormState> {
+  const email = String(formData.get("email") ?? "");
+  if (z.string().email().safeParse(email.trim()).success) await requestPasswordReset(email);
+  return { message: "If that email has a partner account, we've sent a link to reset the password. It expires in 1 hour." };
+}
+
+export async function completePasswordReset(_prev: FormState, formData: FormData): Promise<FormState> {
+  const token = String(formData.get("token") ?? "");
+  const password = String(formData.get("password") ?? "");
+  if (password !== String(formData.get("confirm") ?? "")) return { error: "The two passwords don't match." };
+  const result = await resetPassword(token, password);
+  if ("error" in result) return { error: result.error };
+  await startSession(result.userId);
+  const user = await db.user.findUniqueOrThrow({ where: { id: result.userId }, include: { vendor: { select: { slug: true } } } });
+  redirect(user.role === "admin" ? "/admin" : `/vendor/${user.vendor?.slug ?? ""}`);
+}

@@ -6,21 +6,29 @@ export interface Email {
   subject: string;
   html: string;
   text: string;
+  // Secret strings (like a password reset link) to leave out of the stored copy.
+  secrets?: string[];
 }
 
 // Sends through Resend when RESEND_API_KEY is set; otherwise the email is only
 // stored (status "outbox") so it can be previewed in Admin → Emails.
 // Never throws: a failed email must not break checkout or order updates.
 export async function sendEmail(email: Email): Promise<void> {
+  const { secrets = [], ...content } = email;
+  // When the email really goes out, keep secrets out of the stored copy that admins can read.
+  // (Without a provider the outbox copy is the only one, so it keeps them; production requires a provider.)
+  const redact = (s: string) => secrets.reduce((acc, secret) => acc.split(secret).join("[removed for security]"), s);
+  const stored = process.env.RESEND_API_KEY ? { ...content, html: redact(content.html), text: redact(content.text) } : content;
+
   let log;
   try {
     // The unique key makes this the "already sent?" check, even across concurrent retries.
-    log = await db.emailLog.create({ data: { ...email, status: "outbox" } });
+    log = await db.emailLog.create({ data: { ...stored, sensitive: secrets.length > 0, status: "outbox" } });
   } catch {
     return; // already sent (or queued) once
   }
 
-  await deliver(log);
+  await deliver({ ...log, html: content.html, text: content.text });
 }
 
 // Sends a logged email through Resend, recording the outcome. Also used to retry failures.

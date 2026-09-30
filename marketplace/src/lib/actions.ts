@@ -213,7 +213,8 @@ export async function retryEmail(formData: FormData) {
   await requireAdmin("/admin/emails");
   const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
   const log = await db.emailLog.findUniqueOrThrow({ where: { id } });
-  if (log.status !== "sent") await deliver(log);
+  // A sensitive email's stored copy has its secret removed, so it can't be resent; the person requests a new one.
+  if (log.status !== "sent" && !log.sensitive) await deliver(log);
   revalidatePath("/admin/emails");
 }
 
@@ -274,14 +275,16 @@ export async function makeMainPhoto(formData: FormData) {
 
 // Reviews ---------------------------------------------------------------------------
 
-export type ReviewFormState = { error?: string; done?: boolean } | undefined;
+export type ReviewFormState = { error?: string; done?: boolean; title?: string; body?: string } | undefined;
 
 // Customers aren't signed in: the order number + email on the order page authorize the review.
 export async function submitReviewAction(_prev: ReviewFormState, formData: FormData): Promise<ReviewFormState> {
+  // Echo what they wrote so an error doesn't wipe their review.
+  const kept = { title: String(formData.get("title") ?? ""), body: String(formData.get("body") ?? "") };
   const parsed = reviewInputSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0].message, ...kept };
   const result = await submitReview(parsed.data);
-  if (result.error) return result;
+  if (result.error) return { ...result, ...kept };
   const item = await db.orderItem.findUnique({ where: { id: parsed.data.orderItemId }, include: { product: true } });
   if (item) revalidatePath(`/products/${item.product.slug}`);
   revalidatePath(`/orders/${parsed.data.number}`);

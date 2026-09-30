@@ -74,7 +74,12 @@ Create the first admin on a new database:
 npm run create-user -- you@yourcompany.com admin
 ```
 
-It prints a generated password. After that, add vendor logins from **Admin → Logins**. The temporary password is shown once, to pass on to the vendor, who can change it under **Account**. Admins can reset a forgotten password from the same list.
+It prints a generated password. After that, add vendor logins from **Admin → Logins**. The temporary password is shown once, to pass on to the vendor, who can change it under **Account**.
+
+Forgotten passwords: **Forgot your password?** on the sign-in page emails a single-use link that expires in 1 hour
+(max 3 per hour per email; the page never reveals whether an email has an account). Using it sets the new password,
+signs the account out everywhere else, and lifts any sign-in lockout. Only a hash of the link's token is stored, and the
+copy in Admin → Emails has the link removed. Admins can still reset someone's password from the Logins list.
 
 Passwords are hashed with scrypt; sessions are random tokens stored hashed in the database, in an httpOnly cookie that lasts 30 days. Repeated wrong passwords lock an email out for 15 minutes.
 
@@ -87,6 +92,7 @@ Passwords are hashed with scrypt; sessions are random tokens stored hashed in th
 | Shipped / Out for delivery | Customer | Vendor marks their part "Shipped" (with carrier tracking link) or "Out for delivery" (courier) |
 | Cancelled & refunded | Customer | Vendor (or admin) cancels their part of the order |
 | Priority fee refunded | Customer | Admin refunds the priority fee on a late priority order |
+| Password reset | Vendor/admin login | They ask for it on the sign-in page |
 | Delivered (with review request) | Customer | Vendor marks their part "Delivered": confirms arrival, refrigeration reminder for perishables, what to do if something's wrong, and a review button |
 
 Each email is sent at most once (a vendor toggling the status back and forth doesn't resend). Every email is kept in **Admin → Emails** with a preview, its status, and a Retry button for failures. A failed email never blocks checkout or order updates.
@@ -130,8 +136,7 @@ Without keys, checkout runs in demo mode (orders are marked paid, no card is cha
 ## Not built yet
 
 1. **Sales tax** calculation (see LAUNCH.md).
-2. **Password reset by email**: for now an admin resets forgotten passwords.
-3. **Partial refunds**: refunding a single item or a goodwill credit is done in the Stripe dashboard.
-4. **More notifications**: "delivered" emails and SMS.
-5. **Shipping labels**: carrier integration (e.g. Shippo/EasyPost) instead of typing tracking numbers.
-6. Reviews, a delivery-date picker, and gift scheduling.
+2. **Partial refunds**: refunding a single item or a goodwill credit is done in the Stripe dashboard.
+3. **SMS** notifications.
+4. **Shipping labels**: carrier integration (e.g. Shippo/EasyPost) instead of typing tracking numbers.
+5. A delivery-date picker and gift scheduling.
