@@ -46,6 +46,7 @@ export async function notifyOrderPaid(orderId: string) {
       deliveryDate: vo.deliveryDate,
       priority: vo.priority,
       holidayName: vo.holidayName,
+      scheduled: vo.scheduled,
       items: vo.items,
       shipTo,
       giftMessage: order.giftMessage,

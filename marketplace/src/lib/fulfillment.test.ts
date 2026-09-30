@@ -39,7 +39,8 @@ describe("quoteFulfillment on ordinary weeks", () => {
 
   it("delivers locally by courier the next day when ordered before cutoff", () => {
     const q = quoteFulfillment(vendor, LOCAL, 5000, true, morning("2026-11-03"));
-    expect(options(q)).toEqual([{ method: "local_delivery", fee: 999, shipDate: "2026-11-04", deliveryDate: "2026-11-04" }]);
+    expect(options(q)).toHaveLength(1);
+    expect(options(q)[0]).toMatchObject({ method: "local_delivery", fee: 999, shipDate: "2026-11-04", deliveryDate: "2026-11-04" });
   });
 
   it("ships vendors the courier doesn't pick up from, even to local ZIPs", () => {
@@ -57,12 +58,13 @@ describe("quoteFulfillment on ordinary weeks", () => {
 
   it("offers only overnight for perishables", () => {
     const q = quoteFulfillment(vendor, FAR, 5000, true, morning("2026-11-03"));
-    expect(options(q)).toEqual([{ method: "overnight_shipping", fee: 1999, shipDate: "2026-11-03", deliveryDate: "2026-11-04" }]);
+    expect(options(q)).toHaveLength(1);
+    expect(options(q)[0]).toMatchObject({ method: "overnight_shipping", fee: 1999, shipDate: "2026-11-03", deliveryDate: "2026-11-04" });
   });
 
   it("adds cheaper 2-day shipping for shelf-stable orders", () => {
     const q = quoteFulfillment(vendor, FAR, 5000, false, morning("2026-11-03"));
-    expect(option(q, "two_day_shipping")).toEqual({ method: "two_day_shipping", fee: 999, shipDate: "2026-11-03", deliveryDate: "2026-11-05" });
+    expect(option(q, "two_day_shipping")).toMatchObject({ method: "two_day_shipping", fee: 999, shipDate: "2026-11-03", deliveryDate: "2026-11-05" });
   });
 
   it("doesn't offer 2-day when the vendor turned it off", () => {
@@ -118,6 +120,44 @@ describe("quoteFulfillment around Yom Tov", () => {
   it("never ships perishables into Yom Tov (Pesach 2027)", () => {
     // Wed Apr 21 2027 is Erev Pesach; Thu–Fri are Yom Tov, then Shabbat.
     const o = options(quoteFulfillment(vendor, FAR, 5000, true, morning("2027-04-21")))[0];
-    expect(o).toEqual({ method: "overnight_shipping", fee: 1999, shipDate: "2027-04-26", deliveryDate: "2027-04-27" });
+    expect(o).toMatchObject({ method: "overnight_shipping", fee: 1999, shipDate: "2027-04-26", deliveryDate: "2027-04-27" });
+  });
+});
+
+describe("scheduling a later delivery date", () => {
+  const dates = (q: FulfillmentQuote, method: string) => option(q, method)!.dates;
+  const weekday = (d: string) => new Date(`${d}T00:00:00Z`).getUTCDay();
+
+  it("starts with the soonest date and covers about a month", () => {
+    const list = dates(quoteFulfillment(vendor, LOCAL, 5000, true, morning("2026-11-03")), "local_delivery");
+    expect(list[0]).toEqual({ deliveryDate: "2026-11-04", shipDate: "2026-11-04" });
+    expect(list.at(-1)!.deliveryDate <= "2026-12-03").toBe(true);
+    expect(list.length).toBeGreaterThan(20);
+  });
+
+  it("never offers Shabbat or Yom Tov for local delivery", () => {
+    // Around Shemini Atzeres / Simchas Torah (Sat Oct 3 – Sun Oct 4, 2026)
+    const list = dates(quoteFulfillment(vendor, LOCAL, 5000, true, morning("2026-09-29")), "local_delivery").map((d) => d.deliveryDate);
+    expect(list).not.toContain("2026-10-03");
+    expect(list).not.toContain("2026-10-04");
+    expect(list.every((d) => weekday(d) !== 6)).toBe(true);
+    expect(list).toContain("2026-10-05");
+  });
+
+  it("offers perishable overnight arrivals only Tue–Fri, shipped the day before", () => {
+    const list = dates(quoteFulfillment(vendor, FAR, 5000, true, morning("2026-11-03")), "overnight_shipping");
+    for (const { deliveryDate, shipDate } of list) {
+      expect([2, 3, 4, 5]).toContain(weekday(deliveryDate));
+      expect(new Date(`${deliveryDate}T00:00:00Z`).getTime() - new Date(`${shipDate}T00:00:00Z`).getTime()).toBe(86_400_000);
+    }
+    expect(list.map((d) => d.deliveryDate)).toContain("2026-11-17");
+  });
+
+  it("offers 2-day arrivals Mon–Fri for shelf-stable orders, skipping Yom Tov", () => {
+    const list = dates(quoteFulfillment(vendor, FAR, 5000, false, morning("2027-04-12")), "two_day_shipping").map((d) => d.deliveryDate);
+    expect(list.every((d) => [1, 2, 3, 4, 5].includes(weekday(d)))).toBe(true);
+    // Pesach I–II 2027 (Thu Apr 22 – Fri Apr 23)
+    expect(list).not.toContain("2027-04-22");
+    expect(list).not.toContain("2027-04-23");
   });
 });

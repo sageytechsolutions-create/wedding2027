@@ -130,6 +130,8 @@ model VendorOrder {
   trackingNumber   String?
   carrier          String?
   deliveredAt      DateTime? // when the vendor marked it delivered
+  // The customer picked a later date than the soonest possible, so don't send it early.
+  scheduled        Boolean   @default(false)
   // Set when the vendor (or an admin) cancels this shipment and the customer is refunded for it.
   cancelledAt          DateTime?
   cancelledBy          String? // email of who cancelled

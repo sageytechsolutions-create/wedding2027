@@ -27,8 +27,10 @@ export const checkoutSchema = z.object({
       z.object({
         vendorId: z.string(),
         method: z.enum(["local_delivery", "overnight_shipping", "two_day_shipping"]),
-        // Pre-Yom Tov priority delivery.
+        // Pre-Yom Tov priority delivery (only with the soonest date).
         priority: z.boolean().default(false),
+        // A later delivery date the customer scheduled (YYYY-MM-DD); omitted = soonest.
+        deliveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       }),
     )
     .max(50)
@@ -112,7 +114,12 @@ export async function placeOrder(input: CheckoutInput): Promise<{ number: string
     if (!option) {
       throw new CheckoutError(`${g.vendorName}: ${methodLabel(selection!.method)} isn't available for this order. Please review your order.`);
     }
-    if (selection?.priority && !option.priority) {
+    const date = selection?.deliveryDate ? option.dates.find((d) => d.deliveryDate === selection.deliveryDate) : option.dates[0];
+    if (!date) {
+      throw new CheckoutError(`${g.vendorName}: that delivery date is no longer available. Please pick another.`);
+    }
+    const scheduled = date.deliveryDate !== option.deliveryDate;
+    if (selection?.priority && (!option.priority || scheduled)) {
       throw new CheckoutError(`${g.vendorName}: priority holiday delivery is no longer available. Please review your order.`);
     }
     const p = selection?.priority ? option.priority! : null;
@@ -124,8 +131,9 @@ export async function placeOrder(input: CheckoutInput): Promise<{ number: string
       data: {
         vendorId: g.vendorId,
         method: option.method,
-        shipDate: new Date(`${p?.shipDate ?? option.shipDate}T00:00:00Z`),
-        deliveryDate: new Date(`${p?.deliveryDate ?? option.deliveryDate}T00:00:00Z`),
+        shipDate: new Date(`${p?.shipDate ?? date.shipDate}T00:00:00Z`),
+        deliveryDate: new Date(`${p?.deliveryDate ?? date.deliveryDate}T00:00:00Z`),
+        scheduled,
         priority: p != null,
         priorityFee: p?.fee ?? 0,
         holidayName: p ? (g.quote.holiday?.name ?? null) : null,

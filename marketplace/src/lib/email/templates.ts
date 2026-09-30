@@ -207,6 +207,7 @@ export interface VendorNewOrderData {
   deliveryDate: Date;
   priority: boolean;
   holidayName: string | null;
+  scheduled?: boolean;
   items: Item[];
   shipTo: ShipTo;
   giftMessage: string | null;
@@ -216,12 +217,17 @@ export interface VendorNewOrderData {
 export function vendorNewOrderEmail(d: VendorNewOrderData): Rendered {
   const local = d.method === "local_delivery";
   const due = local ? `Courier pickup ${formatDeliveryDate(d.shipDate)}` : `Ship by ${formatDeliveryDate(d.shipDate)}`;
-  const priority = d.priority ? `⚡ PRIORITY: must arrive before ${d.holidayName ?? "Yom Tov"}. ` : "";
+  const priority = d.priority
+    ? `⚡ PRIORITY: must arrive before ${d.holidayName ?? "Yom Tov"}. `
+    : d.scheduled
+      ? `📅 SCHEDULED for ${formatDeliveryDate(d.deliveryDate)}: don't send before ${formatDeliveryDate(d.shipDate)}. `
+      : "";
 
   const html = layout(
     `${priority}New order ${d.number}. ${due}.`,
     `<h1 style="font-family:Georgia,serif;font-size:24px;margin:0 0 8px">New order ${e(d.number)}</h1>
 ${d.priority ? `<p style="margin:0 0 8px;padding:8px 12px;background:#fef3c7;border-radius:8px;color:#92400e"><strong>⚡ Priority:</strong> pack this first. It must arrive before ${e(d.holidayName ?? "Yom Tov")}.</p>` : ""}
+${d.scheduled ? `<p style="margin:0 0 8px;padding:8px 12px;background:#e0f2fe;border-radius:8px;color:#075985"><strong>📅 Scheduled delivery:</strong> the customer chose ${e(formatDeliveryDate(d.deliveryDate))}. Please don't send it before ${e(formatDeliveryDate(d.shipDate))}.</p>` : ""}
 <p style="margin:0"><strong>${e(methodLabel(d.method))}</strong> · ${e(due)} · arrives ${e(formatDeliveryDate(d.deliveryDate))}</p>
 <table role="presentation" width="100%" style="font-size:14px;margin:16px 0">${itemRows(d.items)}</table>
 <p style="margin:0 0 4px;font-weight:bold">${local ? "Delivering to" : "Ship to"}</p>
@@ -245,7 +251,7 @@ ${button(d.portalUrl, "Open your vendor portal")}`,
     `Vendor portal: ${d.portalUrl}`,
   ].join("\n");
 
-  return { subject: `${d.priority ? "⚡ Priority " : ""}New order ${d.number}: ${due}`, html, text };
+  return { subject: `${d.priority ? "⚡ Priority " : d.scheduled ? "📅 Scheduled " : ""}New order ${d.number}: ${due}`, html, text };
 }
 
 // --- Customer: part of the order cancelled and refunded ------------------------------

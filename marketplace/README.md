@@ -41,6 +41,14 @@ Key logic:
 - `src/lib/orders.ts`: re-prices the cart from the database, splits each order into one `VendorOrder` per vendor, and computes commission and vendor payout.
 - `prisma/schema.prisma`: Vendor, Product, Order → VendorOrder → OrderItem.
 
+## Scheduled delivery
+
+At checkout each vendor's delivery has a **Deliver on** dropdown: the soonest date, or any later day up to 30 days
+ahead that the delivery rules allow (no Shabbat/Yom Tov; perishables arrive the day after they ship; carriers only on
+business days). The server only accepts dates it would itself offer. Scheduled shipments are flagged 📅 in the vendor
+portal and new-order email with the day to send them, so they don't go out early. Priority holiday delivery applies
+only to the soonest date.
+
 ## Reviews
 
 Only customers who bought an item can review it, one review per item, from their order page (the order number
@@ -139,4 +147,4 @@ Without keys, checkout runs in demo mode (orders are marked paid, no card is cha
 2. **Partial refunds**: refunding a single item or a goodwill credit is done in the Stripe dashboard.
 3. **SMS** notifications.
 4. **Shipping labels**: carrier integration (e.g. Shippo/EasyPost) instead of typing tracking numbers.
-5. A delivery-date picker and gift scheduling.
+5. Scheduling a gift *message* or recipient notification for a specific day.

@@ -35,12 +35,19 @@ export interface PriorityOption {
   deliveryDate: string;
 }
 
+export interface ScheduledDate {
+  deliveryDate: string; // YYYY-MM-DD
+  shipDate: string; // YYYY-MM-DD; the day the vendor sends it (for local delivery, the same day)
+}
+
 export interface DeliveryOption {
   method: FulfillmentMethod;
   fee: number;
   shipDate: string; // YYYY-MM-DD; for local delivery, the day it goes out
-  deliveryDate: string; // YYYY-MM-DD
+  deliveryDate: string; // YYYY-MM-DD, the soonest possible
   priority?: PriorityOption;
+  // Every day the customer can choose to have it arrive, soonest first (the first equals deliveryDate).
+  dates: ScheduledDate[];
 }
 
 export type FulfillmentQuote =
@@ -88,6 +95,21 @@ function carrierArrival(shipDate: Date, transitDays: number): Date {
   return day;
 }
 
+// Customers can schedule delivery up to this many days ahead (e.g. for a gift or a Yom Tov meal).
+export const SCHEDULE_AHEAD_DAYS = 30;
+
+function shippingDates(transitDays: number, prepDay: Date, perishable: boolean): ScheduledDate[] {
+  const horizon = formatDay(addDays(prepDay, SCHEDULE_AHEAD_DAYS));
+  const seen = new Map<string, ScheduledDate>();
+  // Every arrival day is found by asking "if the vendor could start on day d, when would it arrive?"
+  for (let i = 0; i <= SCHEDULE_AHEAD_DAYS; i++) {
+    const { deliveryDate, shipDate } = shippingSchedule(transitDays, addDays(prepDay, i), perishable);
+    if (deliveryDate > horizon) break;
+    if (!seen.has(deliveryDate)) seen.set(deliveryDate, { deliveryDate, shipDate });
+  }
+  return [...seen.values()];
+}
+
 function shippingOption(
   method: FulfillmentMethod,
   transitDays: number,
@@ -95,6 +117,11 @@ function shippingOption(
   prepDay: Date,
   perishable: boolean,
 ): DeliveryOption {
+  const dates = shippingDates(transitDays, prepDay, perishable);
+  return { method, fee, ...dates[0], dates };
+}
+
+function shippingSchedule(transitDays: number, prepDay: Date, perishable: boolean): ScheduledDate {
   const shipDays = perishable ? PERISHABLE_SHIP_DAYS : STANDARD_SHIP_DAYS;
   // Never ship so it lands on Shabbat/Yom Tov. Perishables must also arrive the very next calendar day.
   const shipDate = firstDay(prepDay, (d) => {
@@ -102,7 +129,7 @@ function shippingOption(
     const arrival = carrierArrival(d, transitDays);
     return workDay(arrival) && (!perishable || formatDay(arrival) === formatDay(addDays(d, transitDays)));
   });
-  return { method, fee, shipDate: formatDay(shipDate), deliveryDate: formatDay(carrierArrival(shipDate, transitDays)) };
+  return { shipDate: formatDay(shipDate), deliveryDate: formatDay(carrierArrival(shipDate, transitDays)) };
 }
 
 export function quoteFulfillment(
@@ -124,11 +151,17 @@ export function quoteFulfillment(
   const options: DeliveryOption[] = [];
   if (rules.courierPickup && isInCourierArea(zip)) {
     const deliveryDate = formatDay(firstDay(addDays(prepDay, 1), workDay));
+    // The courier can come any working day from the soonest date on.
+    const dates: ScheduledDate[] = [];
+    for (let d = new Date(`${deliveryDate}T00:00:00Z`), end = addDays(prepDay, SCHEDULE_AHEAD_DAYS); d <= end; d = addDays(d, 1)) {
+      if (workDay(d)) dates.push({ deliveryDate: formatDay(d), shipDate: formatDay(d) });
+    }
     const option: DeliveryOption = {
       method: "local_delivery",
       fee: free ? 0 : localDelivery.fee,
       shipDate: deliveryDate,
       deliveryDate,
+      dates,
     };
     // Priority: same-day delivery when the order is in before the cutoff.
     const rush = formatDay(prepDay) === formatDay(today) ? formatDay(today) : deliveryDate;

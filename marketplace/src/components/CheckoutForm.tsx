@@ -15,7 +15,7 @@ const input = "w-full rounded-lg border border-stone-300 bg-white px-3 py-2";
 export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: boolean; cancelled: boolean }) {
   const { lines, ready, subtotal } = useCart();
   // Per vendor: chosen delivery method and whether priority holiday delivery is on.
-  const [choices, setChoices] = useState<Record<string, { method?: string; priority: boolean }>>({});
+  const [choices, setChoices] = useState<Record<string, { method?: string; priority: boolean; date?: string }>>({});
   const [zip, setZip] = useState("");
   const [quotes, setQuotes] = useState<GroupQuote[] | null>(null);
   const [error, setError] = useState("");
@@ -51,19 +51,25 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
 
   const blocked = quotes?.filter((g) => !g.quote.available) ?? [];
   // The option in effect for a vendor: their pick if the current quote still offers it, else the default.
-  const selected = (g: GroupQuote): { option: DeliveryOption; priority: boolean } | null => {
+  const selected = (g: GroupQuote): { option: DeliveryOption; priority: boolean; date: string; scheduled: boolean } | null => {
     if (!g.quote.available) return null;
     const choice = choices[g.vendorId];
     const option = g.quote.options.find((o) => o.method === choice?.method) ?? g.quote.options[0];
-    return { option, priority: !!choice?.priority && !!option.priority };
+    const date = option.dates.find((d) => d.deliveryDate === choice?.date)?.deliveryDate ?? option.deliveryDate;
+    const scheduled = date !== option.deliveryDate;
+    // Priority is about rushing the soonest delivery before Yom Tov, so it doesn't combine with a later date.
+    return { option, date, scheduled, priority: !!choice?.priority && !!option.priority && !scheduled };
   };
   const shipping =
     quotes?.reduce((s, g) => {
       const sel = selected(g);
       return sel ? s + sel.option.fee + (sel.priority ? sel.option.priority!.fee : 0) : s;
     }, 0) ?? null;
-  const choose = (vendorId: string, change: { method?: string; priority?: boolean }) =>
-    setChoices((prev) => ({ ...prev, [vendorId]: { method: prev[vendorId]?.method, priority: prev[vendorId]?.priority ?? false, ...change } }));
+  const choose = (vendorId: string, change: { method?: string; priority?: boolean; date?: string }) =>
+    setChoices((prev) => ({
+      ...prev,
+      [vendorId]: { method: prev[vendorId]?.method, priority: prev[vendorId]?.priority ?? false, date: prev[vendorId]?.date, ...change },
+    }));
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -88,7 +94,9 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
           items,
           selections: (quotes ?? []).flatMap((g) => {
             const sel = selected(g);
-            return sel ? [{ vendorId: g.vendorId, method: sel.option.method, priority: sel.priority }] : [];
+            return sel
+              ? [{ vendorId: g.vendorId, method: sel.option.method, priority: sel.priority, ...(sel.scheduled && { deliveryDate: sel.date }) }]
+              : [];
           }),
         }),
       });
@@ -181,7 +189,7 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
                           className="mt-1"
                           name={`delivery-${vendorId}`}
                           checked={sel.option.method === o.method}
-                          onChange={() => choose(vendorId, { method: o.method })}
+                          onChange={() => choose(vendorId, { method: o.method, date: undefined })}
                         />
                         <span>
                           {methodLabel(o.method)} · arrives {formatDeliveryDate(o.deliveryDate)} · {o.fee === 0 ? "Free" : formatMoney(o.fee)}
@@ -189,7 +197,27 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
                       </label>
                     ))}
                   </div>
-                  {sel.option.priority ? (
+                  {sel.option.dates.length > 1 && (
+                    <label className="mt-2 flex flex-wrap items-center gap-2 text-stone-700">
+                      <span>Deliver on</span>
+                      <select
+                        aria-label={`Delivery date for ${vendorLines[0].vendorName}`}
+                        value={sel.date}
+                        onChange={(e) => choose(vendorId, { method: sel.option.method, date: e.target.value })}
+                        className="rounded-lg border border-stone-300 bg-white px-2 py-1"
+                      >
+                        {sel.option.dates.map((d, i) => (
+                          <option key={d.deliveryDate} value={d.deliveryDate}>
+                            {formatDeliveryDate(d.deliveryDate)}
+                            {i === 0 ? " (soonest)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  {sel.scheduled ? (
+                    <p className="mt-1 text-stone-600">📅 Scheduled: the shop will send it so it arrives {formatDeliveryDate(sel.date)}.</p>
+                  ) : sel.option.priority ? (
                     <label className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 p-2 text-amber-900">
                       <input
                         type="checkbox"

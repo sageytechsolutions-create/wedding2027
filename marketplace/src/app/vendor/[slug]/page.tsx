@@ -84,6 +84,11 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
                   {vo.priority && (
                     <span className="ml-2 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">⚡ Priority before {vo.holidayName}</span>
                   )}
+                  {vo.scheduled && (
+                    <span className="ml-2 rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800">
+                      📅 Scheduled for {formatDeliveryDate(vo.deliveryDate)}: don&apos;t send early
+                    </span>
+                  )}
                   {vo.priorityRefundedAt && (
                     <span className="ml-2 text-xs text-stone-500">Late: {formatMoney(vo.priorityFee)} priority fee refunded</span>
                   )}
