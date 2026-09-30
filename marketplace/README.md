@@ -45,7 +45,7 @@ Key logic:
 
 Only customers who bought an item can review it, one review per item, from their order page (the order number
 + email that already protect that page). They're invited by email when the vendor marks the order delivered, and
-can review for 120 days. Reviews show "Verified purchase" with the customer's first name and last initial.
+can review for 120 days (the invitation is part of the "Delivered" email). Reviews show "Verified purchase" with the customer's first name and last initial.
 
 - Stars appear on product cards, vendor pages and product pages, plus schema.org rating data for search results.
   Totals are kept on each product (`ratingCount`, `ratingSum`) so listings don't recount reviews.
@@ -87,7 +87,7 @@ Passwords are hashed with scrypt; sessions are random tokens stored hashed in th
 | Shipped / Out for delivery | Customer | Vendor marks their part "Shipped" (with carrier tracking link) or "Out for delivery" (courier) |
 | Cancelled & refunded | Customer | Vendor (or admin) cancels their part of the order |
 | Priority fee refunded | Customer | Admin refunds the priority fee on a late priority order |
-| How was it? (review request) | Customer | Vendor marks their part "Delivered" |
+| Delivered (with review request) | Customer | Vendor marks their part "Delivered": confirms arrival, refrigeration reminder for perishables, what to do if something's wrong, and a review button |
 
 Each email is sent at most once (a vendor toggling the status back and forth doesn't resend). Every email is kept in **Admin → Emails** with a preview, its status, and a Retry button for failures. A failed email never blocks checkout or order updates.
 
@@ -106,7 +106,7 @@ Each vendor's part of an order can be cancelled on its own with **Cancel & refun
 ### On-time guarantee for priority orders
 
 If a priority order arrives late, the customer gets the priority fee back (promised on `/shipping`).
-Priority orders past their guaranteed date and not marked delivered are listed on the admin dashboard with a
+Priority orders past their guaranteed date that aren't marked delivered, or were marked delivered on a later day, are listed on the admin dashboard with a
 **Refund priority fee** button (admins only). It refunds just that fee and emails the customer. For shipped orders
 the vendor received the fee, so it comes back out of their payout; for NYC courier deliveries the platform kept
 it and absorbs it. A later cancellation of the same order refunds only what's left.

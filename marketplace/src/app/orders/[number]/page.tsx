@@ -4,6 +4,7 @@ import { ClearCart } from "@/components/ClearCart";
 import { ReviewForm } from "@/components/ReviewForm";
 import { Stars } from "@/components/Stars";
 import { canReview } from "@/lib/reviews";
+import { localNow } from "@/lib/time";
 import { StatusBadge } from "@/components/StatusBadge";
 import { db } from "@/lib/db";
 import { formatDeliveryDate, methodLabel } from "@/lib/fulfillment";
@@ -74,7 +75,11 @@ export default async function OrderPage({
                 </span>
               ) : (
                 <>
-                  {methodLabel(vo.method)}. Arrives <strong>{formatDeliveryDate(vo.deliveryDate)}</strong>
+                  {vo.deliveredAt ? (
+                    <>{methodLabel(vo.method)}. Delivered <strong>{formatDeliveryDate(localNow(vo.deliveredAt).day)}</strong> ✓</>
+                  ) : (
+                    <>{methodLabel(vo.method)}. Arrives <strong>{formatDeliveryDate(vo.deliveryDate)}</strong></>
+                  )}
                   {vo.priorityRefundedAt && (
                     <span className="block text-emerald-700">Sorry it was late: your {formatMoney(vo.priorityFee)} priority fee was refunded.</span>
                   )}

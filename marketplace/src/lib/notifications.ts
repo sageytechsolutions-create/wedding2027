@@ -1,7 +1,8 @@
 import { db } from "./db";
 import { sendEmail } from "./email/send";
-import { orderConfirmationEmail, priorityRefundEmail, refundEmail, reviewRequestEmail, shippedEmail, vendorNewOrderEmail } from "./email/templates";
+import { orderConfirmationEmail, priorityRefundEmail, refundEmail, deliveredEmail, shippedEmail, vendorNewOrderEmail } from "./email/templates";
 import { siteUrl } from "./stripe";
+import { localNow } from "./time";
 import { trackingUrl } from "./tracking";
 
 const orderUrl = (o: { number: string; email: string }) => `${siteUrl()}/orders/${o.number}?email=${encodeURIComponent(o.email)}`;
@@ -56,7 +57,7 @@ export async function notifyOrderPaid(orderId: string) {
   }
 }
 
-// When a vendor marks their part shipped (carrier), out for delivery (courier), or delivered (asks for a review).
+// When a vendor marks their part shipped (carrier), out for delivery (courier), or delivered (with a review request).
 export async function notifyVendorOrderStatus(vendorOrderId: string) {
   const vo = await db.vendorOrder.findUniqueOrThrow({
     where: { id: vendorOrderId },
@@ -65,14 +66,19 @@ export async function notifyVendorOrderStatus(vendorOrderId: string) {
   if (vo.order.paymentStatus !== "paid") return;
 
   if (vo.status === "delivered") {
-    const email = reviewRequestEmail({
+    const email = deliveredEmail({
       number: vo.order.number,
+      orderUrl: orderUrl(vo.order),
       reviewUrl: `${orderUrl(vo.order)}#reviews`,
       customerName: vo.order.name,
       vendorName: vo.vendor.name,
       items: vo.items,
+      perishable: vo.items.some((i) => i.product.perishable),
+      // The calendar day in New York, so an evening delivery isn't shown as the next day.
+      deliveredOn: localNow(vo.deliveredAt ?? new Date()).day,
     });
-    await sendEmail({ key: `review-request:${vo.id}`, to: vo.order.email, ...email });
+    // Sent once per shipment, even if the status is changed back and forth.
+    await sendEmail({ key: `delivered:${vo.id}`, to: vo.order.email, ...email });
     return;
   }
   if (vo.status !== "shipped" && vo.status !== "out_for_delivery") return;

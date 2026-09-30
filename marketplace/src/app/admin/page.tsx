@@ -17,7 +17,7 @@ const field = "rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm";
 export default async function AdminPage() {
   const admin = await requireAdmin();
   const today = localNow(new Date()).day;
-  const [vendors, recent, totals, users, refunds, unreversed, latePriority, priorityRefunded] = await Promise.all([
+  const [vendors, recent, totals, users, refunds, unreversed, notDelivered, deliveredPriority, priorityRefunded] = await Promise.all([
     db.vendor.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -50,6 +50,17 @@ export default async function AdminPage() {
       orderBy: { deliveryDate: "asc" },
       include: { order: true, vendor: true },
     }),
+    // Priority orders marked delivered recently; late ones are picked out below.
+    db.vendorOrder.findMany({
+      where: {
+        priority: true,
+        priorityRefundedAt: null,
+        status: "delivered",
+        deliveredAt: { gte: new Date(Date.now() - 30 * 86_400_000) },
+        order: { paymentStatus: "paid" },
+      },
+      include: { order: true, vendor: true },
+    }),
     // Shown for a week as confirmation, and as a record of the guarantee being honored.
     db.vendorOrder.findMany({
       where: { priorityRefundedAt: { gte: new Date(Date.now() - 7 * 86_400_000) } },
@@ -57,6 +68,10 @@ export default async function AdminPage() {
       include: { order: true, vendor: true },
     }),
   ]);
+
+  // Late = still not delivered after the guaranteed day, or delivered on a later (New York) day.
+  const deliveredLate = deliveredPriority.filter((vo) => localNow(vo.deliveredAt!).day > vo.deliveryDate);
+  const latePriority = [...notDelivered, ...deliveredLate].sort((a, b) => a.deliveryDate.getTime() - b.deliveryDate.getTime());
 
   const stats = [
     ["Gross merchandise sales", formatMoney(totals._sum.subtotal ?? 0)],
@@ -94,8 +109,8 @@ export default async function AdminPage() {
           <h2 className="font-semibold">⚡ Late priority orders</h2>
           {latePriority.length > 0 ? (
             <p className="mt-1">
-              These were guaranteed to arrive before Yom Tov and aren&apos;t marked delivered. If they were late, refund the priority fee (our
-              promise). If they did arrive on time, have the vendor mark them delivered.
+              These were guaranteed to arrive by a date before Yom Tov and either aren&apos;t marked delivered yet or were delivered after it.
+              If they were late, refund the priority fee (our promise). If they did arrive on time, have the vendor mark them delivered.
             </p>
           ) : (
             <p className="mt-1">None waiting. 👍</p>
@@ -104,7 +119,8 @@ export default async function AdminPage() {
             {latePriority.map((vo) => (
               <li key={vo.id} className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 <span>
-                  <strong>{vo.order.number}</strong> · {vo.vendor.name} · due {formatDeliveryDate(vo.deliveryDate)} · {vo.status.replace(/_/g, " ")}
+                  <strong>{vo.order.number}</strong> · {vo.vendor.name} · due {formatDeliveryDate(vo.deliveryDate)} ·{" "}
+                  {vo.deliveredAt ? `delivered ${formatDeliveryDate(localNow(vo.deliveredAt).day)}` : vo.status.replace(/_/g, " ")}
                 </span>
                 <RefundPriorityButton vendorOrderId={vo.id} amount={vo.priorityFee} />
               </li>

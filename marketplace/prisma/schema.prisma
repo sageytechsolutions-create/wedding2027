@@ -129,6 +129,7 @@ model VendorOrder {
   status           String    @default("pending") // pending | preparing | shipped | out_for_delivery | delivered | cancelled
   trackingNumber   String?
   carrier          String?
+  deliveredAt      DateTime? // when the vendor marked it delivered
   // Set when the vendor (or an admin) cancels this shipment and the customer is refunded for it.
   cancelledAt          DateTime?
   cancelledBy          String? // email of who cancelled

@@ -335,32 +335,48 @@ ${button(d.orderUrl, "View your order")}`,
   return { subject: `Priority fee refunded: ${formatMoney(d.amount)} (${d.number})`, html, text };
 }
 
-// --- Customer: delivered, please review ---------------------------------------------
+// --- Customer: delivered (and please review) ---------------------------------------
 
-export interface ReviewRequestData {
+export interface DeliveredData {
   number: string;
+  orderUrl: string;
   reviewUrl: string;
   customerName: string;
   vendorName: string;
   items: Item[];
+  perishable: boolean;
+  deliveredOn: Date;
 }
 
-export function reviewRequestEmail(d: ReviewRequestData): Rendered {
+export function deliveredEmail(d: DeliveredData): Rendered {
+  const headline = `Your ${d.vendorName} order has arrived`;
+  const when = formatDeliveryDate(d.deliveredOn);
+  const problem = `Something wrong? If anything arrived damaged, spoiled or missing, reply to this email within 48 hours with a photo and we'll make it right.`;
+
   const html = layout(
-    `How was your order from ${d.vendorName}?`,
-    `<h1 style="font-family:Georgia,serif;font-size:24px;margin:0 0 8px">How was it?</h1>
-<p style="margin:0">Hi ${e(firstName(d.customerName))}, your order from <strong>${e(d.vendorName)}</strong> has been delivered. We hope you loved it!</p>
+    `${headline}. Delivered ${when}.`,
+    `<h1 style="font-family:Georgia,serif;font-size:24px;margin:0 0 8px">${e(headline)} 🎉</h1>
+<p style="margin:0">Hi ${e(firstName(d.customerName))}, your part of order <strong>${e(d.number)}</strong> was delivered ${e(when)}.</p>
 <table role="presentation" width="100%" style="font-size:14px;margin:16px 0">${itemRows(d.items)}</table>
-<p style="margin:0">A quick review helps other customers, and means a lot to a small kitchen.</p>
-${button(d.reviewUrl, "★ Leave a review")}`,
+${d.perishable ? `<p style="margin:0 0 12px;padding:10px 14px;background:#eff6ff;border-radius:10px;color:#1e3a8a"><strong>❄️ Please refrigerate perishable items right away.</strong></p>` : ""}
+<p style="margin:0;font-size:14px;color:#57534e">${e(problem)}</p>
+<p style="margin:20px 0 0">Enjoying it? A quick review helps other customers and means a lot to a small kitchen.</p>
+${button(d.reviewUrl, "★ Leave a review")}
+<p style="margin:0;font-size:13px"><a href="${e(d.orderUrl)}" style="color:#78716c">View your order</a></p>`,
   );
+
   const text = [
-    `How was it? Your order from ${d.vendorName} has been delivered.`,
+    `${headline}. Delivered ${when}.`,
     "",
+    `Order ${d.number}:`,
     itemLines(d.items),
+    ...(d.perishable ? ["", "Please refrigerate perishable items right away."] : []),
     "",
-    "A quick review helps other customers, and means a lot to a small kitchen.",
-    `Leave a review: ${d.reviewUrl}`,
+    problem,
+    "",
+    `Enjoying it? Leave a review: ${d.reviewUrl}`,
+    `View your order: ${d.orderUrl}`,
   ].join("\n");
-  return { subject: `How was your ${d.vendorName} order? (${d.number})`, html, text };
+
+  return { subject: `Delivered: your ${d.vendorName} order (${d.number})`, html, text };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { trackingUrl } from "../tracking";
-import { escapeHtml, orderConfirmationEmail, shippedEmail, vendorNewOrderEmail } from "./templates";
+import { deliveredEmail, escapeHtml, orderConfirmationEmail, shippedEmail, vendorNewOrderEmail } from "./templates";
 
 const shipTo = { name: "Dana <script>alert(1)</script> Levi", address1: "1 Ocean Pkwy", address2: null, city: "Brooklyn", state: "NY", zip: "11230" };
 const items = [{ name: "Challah Pair", quantity: 2, unitPrice: 1800 }];
@@ -92,5 +92,31 @@ describe("trackingUrl", () => {
     expect(trackingUrl(null, "1ZABC")).toContain("ups.com");
     expect(trackingUrl("Bob's Trucks", "123")).toBeNull();
     expect(trackingUrl("UPS", null)).toBeNull();
+  });
+});
+
+describe("deliveredEmail", () => {
+  const base = {
+    number: "LL-TEST1",
+    orderUrl: "https://example.com/orders/LL-TEST1?email=a%40b.com",
+    reviewUrl: "https://example.com/orders/LL-TEST1?email=a%40b.com#reviews",
+    customerName: "Dana <Levi>",
+    vendorName: "Eshel",
+    items,
+    deliveredOn: new Date("2026-10-01T00:00:00Z"),
+  };
+
+  it("confirms the delivery, explains what to do if something's wrong, and asks for a review", () => {
+    const email = deliveredEmail({ ...base, perishable: true });
+    expect(email.subject).toBe("Delivered: your Eshel order (LL-TEST1)");
+    expect(email.text).toContain("Delivered Thursday, October 1");
+    expect(email.text).toContain("within 48 hours with a photo");
+    expect(email.text).toContain("refrigerate");
+    expect(email.html).toContain("#reviews");
+    expect(email.html).not.toContain("<Levi>");
+  });
+
+  it("skips the refrigeration note for shelf-stable orders", () => {
+    expect(deliveredEmail({ ...base, perishable: false }).text).not.toContain("refrigerate");
   });
 });

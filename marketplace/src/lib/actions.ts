@@ -37,7 +37,14 @@ export async function updateVendorOrder(formData: FormData) {
   if (vendorOrder.status === "cancelled") return; // cancelled and refunded; can't be reopened
   await db.vendorOrder.update({
     where: { id: data.id },
-    data: { status: data.status, carrier: data.carrier || null, trackingNumber: data.trackingNumber || null },
+    data: {
+      status: data.status,
+      carrier: data.carrier || null,
+      trackingNumber: data.trackingNumber || null,
+      // Record when it was first marked delivered; clear it if the vendor takes that back.
+      ...(data.status === "delivered" && vendorOrder.status !== "delivered" && { deliveredAt: new Date() }),
+      ...(data.status !== "delivered" && vendorOrder.deliveredAt && { deliveredAt: null }),
+    },
   });
   if (data.status !== vendorOrder.status) await notifyVendorOrderStatus(vendorOrder.id);
   revalidatePath(`/vendor/${vendorOrder.vendor.slug}`);
