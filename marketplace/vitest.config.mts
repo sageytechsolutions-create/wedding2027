@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 
+const testDb = process.env.TEST_DATABASE_URL ?? "postgresql://ll:ll@localhost:5432/locallegends_test";
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -11,8 +13,8 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
     globalSetup: ["test/global-setup.ts"],
-    env: { DATABASE_URL: `file:${path.resolve(__dirname, "prisma/test.db")}` },
-    // Database tests share one SQLite file.
+    env: { DATABASE_URL: testDb, DIRECT_URL: testDb },
+    // Database tests share one database.
     fileParallelism: false,
   },
 });

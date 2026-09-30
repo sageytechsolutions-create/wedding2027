@@ -3,6 +3,8 @@ import { isRestDay, upcomingHoliday } from "./jewish-calendar";
 import { addDays, formatDay, localNow } from "./time";
 
 export { formatDay, localNow };
+// Display helpers live in format.ts so browser code can use them without the holiday calendar.
+export { formatDeliveryDate, methodLabel } from "./format";
 
 // Decides how a vendor's items can reach a customer and when they arrive.
 //
@@ -148,20 +150,4 @@ export function quoteFulfillment(
     options,
     holiday: holiday ? { name: holiday.name, firstDay: holiday.firstDay } : undefined,
   };
-}
-
-export function methodLabel(method: string): string {
-  switch (method) {
-    case "local_delivery":
-      return "Local next-day delivery";
-    case "two_day_shipping":
-      return "2-day shipping";
-    default:
-      return "Overnight shipping";
-  }
-}
-
-export function formatDeliveryDate(date: string | Date): string {
-  const d = typeof date === "string" ? new Date(`${date}T00:00:00Z`) : date;
-  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
 }

@@ -2,7 +2,9 @@
 export const site = {
   name: "Local Legends",
   tagline: "Iconic kosher favorites from local legends, delivered nationwide.",
-  supportEmail: "support@example.com",
+  supportEmail: process.env.SUPPORT_EMAIL || "support@example.com",
+  // The company that operates the site, as named in the policy pages.
+  legalName: process.env.LEGAL_NAME || "Local Legends",
   timeZone: "America/New_York",
   // Orders placed before this hour count as placed today.
   orderCutoffHour: 14,

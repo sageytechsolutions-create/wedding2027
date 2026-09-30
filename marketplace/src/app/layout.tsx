@@ -14,8 +14,11 @@ import "./globals.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { default: site.name, template: `%s · ${site.name}` },
+  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
+  title: { default: `${site.name}: kosher favorites delivered nationwide`, template: `%s · ${site.name}` },
   description: site.tagline,
+  openGraph: { siteName: site.name, type: "website", title: site.name, description: site.tagline },
+  twitter: { card: "summary", title: site.name, description: site.tagline },
 };
 
 function Banner() {
@@ -59,7 +62,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
           <footer className="mt-16 border-t border-stone-200 py-8 text-sm text-stone-500">
             <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-4 px-4">
-              <p>© {new Date().getFullYear()} {site.name}. Shipping nationwide.</p>
+              <div className="space-y-2">
+                <p>© {new Date().getFullYear()} {site.legalName}. Shipping nationwide.</p>
+                <nav className="flex flex-wrap gap-4">
+                  <Link href="/shipping" className="hover:text-brand">Shipping &amp; refunds</Link>
+                  <Link href="/terms" className="hover:text-brand">Terms</Link>
+                  <Link href="/privacy" className="hover:text-brand">Privacy</Link>
+                  <a href={`mailto:${site.supportEmail}`} className="hover:text-brand">Contact us</a>
+                </nav>
+              </div>
               <div className="flex items-center gap-4">
                 {user ? (
                   <>

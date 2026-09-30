@@ -117,6 +117,13 @@ function slugify(s: string): string {
 }
 
 async function main() {
+  // The seed wipes every table. Never let it near a real database by accident.
+  if (process.env.NODE_ENV === "production" || /supabase|neon|rds\.amazonaws|render\.com/.test(process.env.DATABASE_URL ?? "")) {
+    if (process.env.ALLOW_DESTRUCTIVE_SEED !== "yes") {
+      console.error("Refusing to seed: this looks like a production database and seeding deletes all data.");
+      process.exit(1);
+    }
+  }
   await db.emailLog.deleteMany();
   await db.session.deleteMany();
   await db.user.deleteMany();

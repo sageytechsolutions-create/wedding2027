@@ -17,5 +17,6 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   // Stripe must still be able to confirm payments that finish right at closing time.
-  matcher: ["/((?!_next/|closed|api/stripe/webhook|favicon.ico).*)"],
+  // The health check stays up so monitoring doesn't page anyone on Shabbat.
+  matcher: ["/((?!_next/|closed|api/stripe/webhook|api/health|favicon.ico).*)"],
 };

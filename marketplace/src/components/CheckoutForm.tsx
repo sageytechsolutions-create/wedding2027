@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCart } from "@/components/cart";
-import { formatDeliveryDate, methodLabel, type DeliveryOption } from "@/lib/fulfillment";
+import { formatDeliveryDate, methodLabel } from "@/lib/format";
+import type { DeliveryOption } from "@/lib/fulfillment";
 import { formatMoney } from "@/lib/money";
 import { fetchQuote, type GroupQuote } from "@/lib/quote-client";
 
@@ -222,6 +223,10 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
             <span>{formatMoney(subtotal + (shipping ?? 0))}</span>
           </div>
         </div>
+        <p className="text-xs text-stone-500">
+          By placing your order you agree to our <Link href="/terms" className="underline">Terms</Link>,{" "}
+          <Link href="/shipping" className="underline">Shipping &amp; refunds</Link> and <Link href="/privacy" className="underline">Privacy</Link> policies.
+        </p>
         {cancelled && !error && <p className="text-sm text-amber-700">Payment was cancelled. Your cart is still here.</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button

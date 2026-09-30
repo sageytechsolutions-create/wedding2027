@@ -28,16 +28,16 @@ let dummyHash: Promise<string> | undefined;
 export async function login(_prev: FormState, formData: FormData): Promise<FormState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (isLockedOut(email)) return { error: "Too many attempts. Try again in 15 minutes." };
+  if (await isLockedOut(email)) return { error: "Too many attempts. Try again in 15 minutes." };
 
   const user = await db.user.findUnique({ where: { email }, include: { vendor: { select: { slug: true } } } });
   // Always run a hash check so response time doesn't reveal whether the email exists.
   const ok = await verifyPassword(password, user?.passwordHash ?? (await (dummyHash ??= hashPassword("not-a-real-password"))));
   if (!user || !ok) {
-    recordFailure(email);
+    await recordFailure(email);
     return { error: "Incorrect email or password." };
   }
-  clearFailures(email);
+  await clearFailures(email);
   await startSession(user.id);
   const home = user.role === "admin" ? "/admin" : `/vendor/${user.vendor?.slug ?? ""}`;
   redirect(safeNext(formData.get("next"), home));

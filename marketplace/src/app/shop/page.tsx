@@ -26,10 +26,10 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
     ...(label in KOSHER_LABELS && { labels: { contains: label } }),
     ...(q && {
       OR: [
-        { name: { contains: q } },
-        { description: { contains: q } },
-        { vendor: { name: { contains: q } } },
-        { vendor: { city: { contains: q } } },
+        { name: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+        { vendor: { name: { contains: q, mode: "insensitive" } } },
+        { vendor: { city: { contains: q, mode: "insensitive" } } },
       ],
     }),
   };

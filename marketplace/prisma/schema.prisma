@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Direct (non-pooled) connection for migrations. With Supabase/Neon, DATABASE_URL is the
+  // pooled URL and DIRECT_URL the direct one; locally both can be the same.
+  directUrl = env("DIRECT_URL")
 }
 
 // A restaurant, bakery, butcher, etc. selling through the marketplace.
@@ -172,4 +175,13 @@ model EmailLog {
   status    String // sent | outbox (no provider configured) | failed
   error     String?
   createdAt DateTime @default(now())
+}
+
+// Failed sign-in attempts per email, stored in the database so the lockout
+// holds even when the site runs on several servers.
+model LoginThrottle {
+  email       String    @id
+  failures    Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
 }

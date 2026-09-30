@@ -13,13 +13,16 @@ part of the order themselves.
 
 ## Run it
 
+Going live? See **[LAUNCH.md](LAUNCH.md)** for the step-by-step checklist.
+
 ```bash
 cd marketplace
+docker compose up -d     # local PostgreSQL (dev + test databases)
 npm install
 cp .env.example .env
-npm run setup     # creates the SQLite DB, seeds the launch vendors, and prints demo logins
+npm run setup     # applies migrations, seeds the launch vendors, and prints demo logins
 npm run dev       # http://localhost:3000
-npm test          # delivery, holiday, email and refund tests (uses a throwaway prisma/test.db)
+npm test          # delivery, holiday, email, refund and sign-in tests (uses the locallegends_test database)
 ```
 
 ## What's here
@@ -87,11 +90,18 @@ Without keys, checkout runs in demo mode (orders are marked paid, no card is cha
 3. Add a webhook endpoint at `{SITE_URL}/api/stripe/webhook` for `checkout.session.completed`, `checkout.session.async_payment_succeeded` and `checkout.session.expired`, then put its signing secret in `STRIPE_WEBHOOK_SECRET`. Locally: `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
 4. Each vendor opens their portal and clicks **Connect with Stripe**. Payouts for orders received before they connect are sent when they finish.
 
-## Not built yet (before launch)
+## Production
 
-1. **Password reset by email**: for now an admin resets forgotten passwords. The sign-in lockout is per server instance; move it to the database or Redis if you run several servers.
-2. **Partial refunds**: refunding a single item (rather than a vendor's whole shipment), or a goodwill credit, is done in the Stripe dashboard for now.
-3. **More notifications**: "delivered" emails, SMS, and password-reset emails.
-4. **Shipping labels**: carrier integration (e.g. Shippo/EasyPost for UPS/FedEx overnight) instead of manual tracking entry.
-5. **Production DB**: switch the Prisma provider to `postgresql` (Supabase) and make search case-insensitive with `mode: "insensitive"`.
-6. Product photo uploads, reviews, a delivery-date picker, and gift scheduling.
+- PostgreSQL with Prisma migrations (`prisma/migrations`). `npm run db:migrate` applies them; Vercel does this on every deploy (`vercel-build`).
+- On startup in production the site checks its settings and refuses to run if payments, email or the site URL aren't configured (`src/lib/env.ts`).
+- Security headers (HSTS, no framing, content-type sniffing off), a health check at `/api/health`, `sitemap.xml`, `robots.txt`, and link previews.
+- CI (`.github/workflows/marketplace-ci.yml`) runs typecheck, tests against PostgreSQL, a migrations-vs-schema check, and a production build on every push.
+
+## Not built yet
+
+1. **Sales tax** calculation (see LAUNCH.md).
+2. **Password reset by email**: for now an admin resets forgotten passwords.
+3. **Partial refunds**: refunding a single item or a goodwill credit is done in the Stripe dashboard.
+4. **More notifications**: "delivered" emails and SMS.
+5. **Shipping labels**: carrier integration (e.g. Shippo/EasyPost) instead of typing tracking numbers.
+6. Product photo uploads (currently an image URL), reviews, a delivery-date picker, and gift scheduling.

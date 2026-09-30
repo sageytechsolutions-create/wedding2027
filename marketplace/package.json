@@ -5,15 +5,17 @@
   "description": "Multi-vendor food marketplace with nationwide shipping and local next-day delivery",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "tsc --noEmit",
     "test": "vitest run",
-    "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "rm -f prisma/dev.db && prisma db push && tsx prisma/seed.ts",
-    "setup": "prisma db push && tsx prisma/seed.ts",
-    "create-user": "tsx scripts/create-user.ts"
+    "db:reset": "prisma migrate reset",
+    "setup": "prisma migrate deploy && tsx prisma/seed.ts",
+    "create-user": "tsx scripts/create-user.ts",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "typecheck": "tsc --noEmit",
+    "vercel-build": "prisma migrate deploy && npm run build"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

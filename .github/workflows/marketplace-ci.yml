@@ -1,0 +1,56 @@
+name: Marketplace CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'marketplace/**'
+      - '.github/workflows/marketplace-ci.yml'
+  pull_request:
+    paths:
+      - 'marketplace/**'
+
+concurrency:
+  group: marketplace-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: marketplace
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ll
+          POSTGRES_PASSWORD: ll
+          POSTGRES_DB: locallegends_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ll"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://ll:ll@localhost:5432/locallegends_test
+      DIRECT_URL: postgresql://ll:ll@localhost:5432/locallegends_test
+      TEST_DATABASE_URL: postgresql://ll:ll@localhost:5432/locallegends_test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: marketplace/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url "$DATABASE_URL" --exit-code
+        name: Check migrations match the schema
+      - run: npm run build

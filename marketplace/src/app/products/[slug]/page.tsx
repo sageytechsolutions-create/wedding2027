@@ -9,6 +9,18 @@ import { formatMoney, vendorLocation } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const product = await db.product.findUnique({ where: { slug }, include: { vendor: { select: { name: true } } } });
+  if (!product) return {};
+  const title = `${product.name} from ${product.vendor.name}`;
+  return {
+    title,
+    description: product.description.slice(0, 160),
+    openGraph: { title, description: product.description.slice(0, 160), ...(product.imageUrl && { images: [product.imageUrl] }) },
+  };
+}
+
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const product = await db.product.findUnique({ where: { slug }, include: { vendor: true } });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatDeliveryDate, methodLabel } from "@/lib/fulfillment";
+import { formatDeliveryDate, methodLabel } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import { fetchQuote, type GroupQuote } from "@/lib/quote-client";
 

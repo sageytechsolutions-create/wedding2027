@@ -6,6 +6,13 @@ import { localDelivery } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const vendor = await db.vendor.findUnique({ where: { slug } });
+  if (!vendor) return {};
+  return { title: vendor.name, description: vendor.tagline, openGraph: { title: vendor.name, description: vendor.tagline } };
+}
+
 export default async function VendorPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const vendor = await db.vendor.findUnique({

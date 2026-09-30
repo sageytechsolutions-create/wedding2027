@@ -70,22 +70,29 @@ export async function requireVendorAccess(vendorId: string, next = "/vendor"): P
   return user;
 }
 
-// Simple in-memory throttle for sign-in attempts (per email, per server instance).
-const failures = new Map<string, { count: number; until: number }>();
+// Sign-in throttle: 5 wrong passwords within 15 minutes locks that email for 15 minutes.
 const MAX_FAILURES = 5;
-const LOCKOUT_MS = 15 * 60_000;
+const WINDOW_MS = 15 * 60_000;
 
-export function isLockedOut(email: string): boolean {
-  const f = failures.get(email);
-  return f != null && f.count >= MAX_FAILURES && f.until > Date.now();
+export async function isLockedOut(email: string): Promise<boolean> {
+  const row = await db.loginThrottle.findUnique({ where: { email } });
+  return row?.lockedUntil != null && row.lockedUntil > new Date();
 }
 
-export function recordFailure(email: string) {
-  const f = failures.get(email);
-  const fresh = !f || f.until < Date.now();
-  failures.set(email, { count: fresh ? 1 : f.count + 1, until: Date.now() + LOCKOUT_MS });
+export async function recordFailure(email: string) {
+  const now = new Date();
+  const row = await db.loginThrottle.findUnique({ where: { email } });
+  // Start counting again if the last failure was long ago (or a lockout has expired).
+  const stale = !row || row.updatedAt.getTime() < now.getTime() - WINDOW_MS || (row.lockedUntil != null && row.lockedUntil <= now);
+  const failures = stale ? 1 : row.failures + 1;
+  const lockedUntil = failures >= MAX_FAILURES ? new Date(now.getTime() + WINDOW_MS) : null;
+  await db.loginThrottle.upsert({
+    where: { email },
+    create: { email, failures, lockedUntil },
+    update: { failures, lockedUntil },
+  });
 }
 
-export function clearFailures(email: string) {
-  failures.delete(email);
+export async function clearFailures(email: string) {
+  await db.loginThrottle.deleteMany({ where: { email } });
 }
