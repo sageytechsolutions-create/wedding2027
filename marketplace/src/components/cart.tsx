@@ -8,6 +8,7 @@ export interface CartLine {
   name: string;
   price: number; // display only; the server re-prices at checkout
   emoji: string;
+  photo?: string | null; // main photo URL, for the cart and checkout
   vendorId: string;
   vendorName: string;
   quantity: number;

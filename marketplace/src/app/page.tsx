@@ -169,8 +169,10 @@ export default async function HomePage() {
               return (
                 <CarouselItem key={v.id} className="w-72">
                   <Link href={`/vendors/${v.slug}`} className="group block">
-                    <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
-                      <ProductImage emoji={hero?.emoji ?? v.emoji} imageUrl={hero ? productPhotoUrl(hero) : null} accent={v.accentColor} className="transition duration-300 group-hover:scale-105" />
+                    <div className="relative">
+                      <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100">
+                        <ProductImage emoji={hero?.emoji ?? v.emoji} imageUrl={hero ? productPhotoUrl(hero) : null} accent={v.accentColor} className="transition duration-300 group-hover:scale-105" />
+                      </div>
                       <span className="absolute -bottom-0 left-4 flex h-14 w-14 translate-y-1/3 items-center justify-center rounded-full border-4 border-white bg-white text-2xl shadow" aria-hidden>{v.emoji}</span>
                     </div>
                     <div className="px-1 pt-6">

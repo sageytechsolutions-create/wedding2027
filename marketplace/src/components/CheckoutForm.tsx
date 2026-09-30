@@ -10,7 +10,16 @@ import { fetchQuote, type GroupQuote } from "@/lib/quote-client";
 
 const US_STATES = "AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split(" ");
 
-const input = "w-full rounded-lg border border-stone-300 bg-white px-3 py-2";
+const input = "w-full rounded-xl border border-stone-300 bg-white px-4 py-3 focus:border-stone-900 focus:outline-none";
+
+function Step({ n, title }: { n: number; title: string }) {
+  return (
+    <legend className="mb-3 flex items-center gap-3 text-lg font-bold">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-900 text-sm text-white">{n}</span>
+      {title}
+    </legend>
+  );
+}
 
 export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: boolean; cancelled: boolean }) {
   const { lines, ready, subtotal } = useCart();
@@ -113,16 +122,16 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
   return (
     <form onSubmit={submit} className="grid gap-10 lg:grid-cols-[1fr_360px]">
       <div className="space-y-8">
-        <h1 className="font-display text-3xl font-bold">Checkout</h1>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Checkout</h1>
 
         <fieldset className="space-y-3">
-          <legend className="mb-2 text-lg font-semibold">Contact</legend>
+          <Step n={1} title="Contact" />
           <input name="email" type="email" required placeholder="Email" className={input} />
           <input name="phone" type="tel" placeholder="Phone (for delivery updates)" className={input} />
         </fieldset>
 
         <fieldset className="space-y-3">
-          <legend className="mb-2 text-lg font-semibold">Ship to</legend>
+          <Step n={2} title="Delivery address" />
           <input name="name" required placeholder="Recipient's full name" className={input} />
           <input name="address1" required placeholder="Street address" className={input} />
           <input name="address2" placeholder="Apt, suite, etc. (optional)" className={input} />
@@ -145,12 +154,12 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
         </fieldset>
 
         <fieldset>
-          <legend className="mb-2 text-lg font-semibold">Sending a gift?</legend>
+          <Step n={3} title="Sending a gift?" />
           <textarea name="giftMessage" maxLength={300} rows={3} placeholder="Add a gift message (optional)" className={input} />
         </fieldset>
 
         <fieldset>
-          <legend className="mb-2 text-lg font-semibold">Payment</legend>
+          <Step n={4} title="Payment" />
           {stripeEnabled ? (
             <p className="rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-600">
               🔒 You&apos;ll pay securely with Stripe on the next page. Cards, Apple Pay and Google Pay accepted.
@@ -163,15 +172,16 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
         </fieldset>
       </div>
 
-      <aside className="h-fit space-y-4 rounded-2xl border border-stone-200 bg-white p-6 lg:sticky lg:top-24">
-        <h2 className="text-lg font-semibold">Order summary</h2>
+      <aside className="h-fit space-y-4 rounded-2xl bg-stone-50 p-6 lg:sticky lg:top-36">
+        <h2 className="text-lg font-bold">Order summary</h2>
+        {quotes == null && <p className="text-sm text-stone-500">Enter your ZIP code to see delivery options and dates for each shop.</p>}
         {[...Map.groupBy(lines, (l) => l.vendorId).entries()].map(([vendorId, vendorLines]) => {
           const group = quotes?.find((g) => g.vendorId === vendorId);
           const q = group?.quote;
           const sel = group ? selected(group) : null;
           return (
-            <div key={vendorId} className="border-b border-stone-100 pb-3 text-sm">
-              <p className="font-medium">{vendorLines[0].vendorName}</p>
+            <div key={vendorId} className="rounded-xl border border-stone-200 bg-white p-4 text-sm">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide">{vendorLines[0].vendorName}</p>
               {vendorLines.map((l) => (
                 <div key={l.productId} className="flex justify-between text-stone-600">
                   <span>{l.quantity} × {l.name}</span>
@@ -183,7 +193,7 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
                 <>
                   <div className="mt-2 space-y-1">
                     {q.options.map((o) => (
-                      <label key={o.method} className="flex items-start gap-2 text-emerald-800">
+                      <label key={o.method} className="flex cursor-pointer items-start gap-2 rounded-lg border border-stone-200 p-2 text-stone-800 has-[:checked]:border-stone-900 has-[:checked]:bg-stone-50">
                         <input
                           type="radio"
                           className="mt-1"
@@ -204,7 +214,7 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
                         aria-label={`Delivery date for ${vendorLines[0].vendorName}`}
                         value={sel.date}
                         onChange={(e) => choose(vendorId, { method: sel.option.method, date: e.target.value })}
-                        className="rounded-lg border border-stone-300 bg-white px-2 py-1"
+                        className="rounded-full border border-stone-300 bg-white px-3 py-1.5 font-medium"
                       >
                         {sel.option.dates.map((d, i) => (
                           <option key={d.deliveryDate} value={d.deliveryDate}>
@@ -259,7 +269,7 @@ export function CheckoutForm({ stripeEnabled, cancelled }: { stripeEnabled: bool
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           disabled={submitting || !quotes || blocked.length > 0}
-          className="w-full rounded-full bg-brand py-3 font-medium text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-full bg-stone-900 py-3.5 font-semibold text-white hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? "Placing order…" : stripeEnabled ? "Continue to payment" : "Place order"}
         </button>
