@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { KosherBadges } from "./KosherBadges";
 import { formatMoney, vendorLocation } from "@/lib/money";
+import { productPhotoUrl } from "@/lib/photos";
 
 export interface ProductCardData {
   slug: string;
@@ -8,6 +9,7 @@ export interface ProductCardData {
   price: number;
   emoji: string;
   imageUrl: string | null;
+  images?: { id: string }[];
   serves: string | null;
   kosherType: string;
   kosherForPassover: boolean;
@@ -15,10 +17,10 @@ export interface ProductCardData {
   vendor: { name: string; city: string; state: string; accentColor: string };
 }
 
-export function ProductImage({ emoji, imageUrl, accent, className = "" }: { emoji: string; imageUrl: string | null; accent: string; className?: string }) {
+export function ProductImage({ emoji, imageUrl, accent, alt = "", className = "" }: { emoji: string; imageUrl: string | null; accent: string; alt?: string; className?: string }) {
   if (imageUrl) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={imageUrl} alt="" className={`h-full w-full object-cover ${className}`} />;
+    return <img src={imageUrl} alt={alt} loading="lazy" className={`h-full w-full object-cover ${className}`} />;
   }
   return (
     <div
@@ -34,7 +36,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
   return (
     <Link href={`/products/${product.slug}`} className="group overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
       <div className="aspect-[4/3] overflow-hidden">
-        <ProductImage emoji={product.emoji} imageUrl={product.imageUrl} accent={product.vendor.accentColor} className="transition group-hover:scale-105" />
+        <ProductImage emoji={product.emoji} imageUrl={productPhotoUrl(product)} alt={product.name} accent={product.vendor.accentColor} className="transition group-hover:scale-105" />
       </div>
       <div className="p-4">
         <p className="text-xs font-medium uppercase tracking-wide text-stone-500">

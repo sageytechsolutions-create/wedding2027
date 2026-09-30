@@ -234,3 +234,32 @@ export async function refundPriorityFeeAction(_prev: CancelResult | undefined, f
   revalidatePath("/admin");
   return result;
 }
+
+// Photos: remove one, or make one the main photo.
+async function photoWithAccess(imageId: string) {
+  const image = await db.productImage.findUniqueOrThrow({ where: { id: imageId }, include: { product: { include: { vendor: true } } } });
+  await requireVendorAccess(image.product.vendorId);
+  return image;
+}
+
+function revalidateProduct(product: { slug: string; vendor: { slug: string } }) {
+  revalidatePath(`/vendor/${product.vendor.slug}`);
+  revalidatePath(`/products/${product.slug}`);
+  revalidatePath("/shop");
+  revalidatePath("/");
+}
+
+export async function deletePhoto(formData: FormData) {
+  const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
+  const image = await photoWithAccess(id);
+  await db.productImage.delete({ where: { id } });
+  revalidateProduct(image.product);
+}
+
+export async function makeMainPhoto(formData: FormData) {
+  const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
+  const image = await photoWithAccess(id);
+  const first = await db.productImage.findFirst({ where: { productId: image.productId }, orderBy: { position: "asc" } });
+  if (first && first.id !== id) await db.productImage.update({ where: { id }, data: { position: first.position - 1 } });
+  revalidateProduct(image.product);
+}

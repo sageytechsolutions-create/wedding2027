@@ -41,6 +41,14 @@ Key logic:
 - `src/lib/orders.ts`: re-prices the cart from the database, splits each order into one `VendorOrder` per vendor, and computes commission and vendor payout.
 - `prisma/schema.prisma`: Vendor, Product, Order → VendorOrder → OrderItem.
 
+## Product photos
+
+Vendors add up to 6 photos per product in their portal (the first is the main photo; they can reorder and delete).
+Big phone photos are shrunk in the browser before upload, which keeps them under the host's ~4.5 MB request limit.
+The server then checks that each file really is an image, turns it upright, strips its metadata (including phone GPS
+location), and stores two WebP sizes in the database (`ProductImage`). They're served from `/images/<id>` with
+year-long caching. For a much larger catalog, move the image bytes to object storage (e.g. Cloudflare R2 or S3).
+
 ## Logins
 
 Shoppers check out as guests. Vendors and the Local Legends team sign in at `/login`.
@@ -113,4 +121,4 @@ Without keys, checkout runs in demo mode (orders are marked paid, no card is cha
 3. **Partial refunds**: refunding a single item or a goodwill credit is done in the Stripe dashboard.
 4. **More notifications**: "delivered" emails and SMS.
 5. **Shipping labels**: carrier integration (e.g. Shippo/EasyPost) instead of typing tracking numbers.
-6. Product photo uploads (currently an image URL), reviews, a delivery-date picker, and gift scheduling.
+6. Reviews, a delivery-date picker, and gift scheduling.

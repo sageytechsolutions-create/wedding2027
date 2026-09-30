@@ -1,6 +1,7 @@
 import { site } from "@/lib/config";
 import { notFound } from "next/navigation";
 import { CancelOrderForm } from "@/components/CancelOrderForm";
+import { ProductPhotos } from "@/components/ProductPhotos";
 import { RefundPriorityButton } from "@/components/RefundPriorityButton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { connectStripe, createProduct, toggleProduct, updateVendorOrder, updateVendorSettings } from "@/lib/actions";
@@ -29,7 +30,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
   const vendor = await db.vendor.findUnique({
     where: { slug },
     include: {
-      products: { orderBy: { createdAt: "desc" } },
+      products: { orderBy: { createdAt: "desc" }, include: { images: { orderBy: { position: "asc" }, select: { id: true } } } },
       vendorOrders: {
         // Unpaid checkouts never reach the vendor.
         where: { order: { paymentStatus: "paid" } },
@@ -151,15 +152,19 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
         <h2 className="text-xl font-semibold">Products</h2>
         <ul className="mt-4 divide-y divide-stone-100 rounded-2xl border border-stone-200 bg-white">
           {vendor.products.map((p) => (
-            <li key={p.id} className="flex items-center gap-3 px-5 py-3">
-              <span className="text-2xl">{p.emoji}</span>
-              <span className={`flex-1 ${p.active ? "" : "text-stone-400 line-through"}`}>{p.name}</span>
-              <span className={`rounded-full px-2 py-0.5 text-xs ${kosherLabels[p.kosherType]?.className ?? ""}`}>{kosherLabels[p.kosherType]?.label ?? p.kosherType}</span>
-              <span className="text-sm">{formatMoney(p.price)}</span>
-              <form action={toggleProduct}>
-                <input type="hidden" name="id" value={p.id} />
-                <button className="text-sm text-brand">{p.active ? "Hide" : "Show"}</button>
-              </form>
+            <li key={p.id} className="space-y-3 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{p.emoji}</span>
+                <span className={`flex-1 ${p.active ? "" : "text-stone-400 line-through"}`}>{p.name}</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${kosherLabels[p.kosherType]?.className ?? ""}`}>{kosherLabels[p.kosherType]?.label ?? p.kosherType}</span>
+                <span className="text-sm">{formatMoney(p.price)}</span>
+                <form action={toggleProduct}>
+                  <input type="hidden" name="id" value={p.id} />
+                  <button className="text-sm text-brand">{p.active ? "Hide" : "Show"}</button>
+                </form>
+              </div>
+              <ProductPhotos productId={p.id} productName={p.name} photos={p.images} />
+              {p.images.length === 0 && <p className="text-xs text-amber-700">No photos yet. Products with photos sell much better.</p>}
             </li>
           ))}
         </ul>
@@ -176,8 +181,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
               <option value="" disabled>Meat / Dairy / Pareve</option>
               {KOSHER_TYPES.map((k) => <option key={k} value={k}>{kosherLabels[k].label}</option>)}
             </select>
-            <input name="emoji" placeholder="Emoji (placeholder image)" className={field} />
-            <input name="imageUrl" type="url" placeholder="Photo URL (optional)" className={field} />
+            <input name="emoji" placeholder="Emoji (shown until you add photos)" className={field} />
             <textarea name="description" required placeholder="Description" rows={3} className={`${field} sm:col-span-2`} />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="perishable" defaultChecked /> Perishable (ships Mon–Thu only)

@@ -2,11 +2,12 @@ import { vendorLocation } from "@/lib/money";
 import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
 import { db } from "@/lib/db";
+import { mainPhoto } from "@/lib/photos";
 import { site } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
-const productCardInclude = { vendor: { select: { name: true, city: true, state: true, accentColor: true } } } as const;
+const productCardInclude = { vendor: { select: { name: true, city: true, state: true, accentColor: true } }, ...mainPhoto } as const;
 
 export default async function HomePage() {
   const [featured, vendors, categories] = await Promise.all([

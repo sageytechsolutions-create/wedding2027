@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/ProductCard";
 import { db } from "@/lib/db";
+import { mainPhoto } from "@/lib/photos";
 import { formatMoney, vendorLocation } from "@/lib/money";
 import { localDelivery } from "@/lib/config";
 
@@ -17,7 +18,7 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
   const vendor = await db.vendor.findUnique({
     where: { slug },
-    include: { products: { where: { active: true }, orderBy: [{ featured: "desc" }, { price: "asc" }] } },
+    include: { products: { where: { active: true }, orderBy: [{ featured: "desc" }, { price: "asc" }], include: mainPhoto } },
   });
   if (!vendor || !vendor.active) notFound();
 

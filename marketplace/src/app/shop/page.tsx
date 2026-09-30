@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { ProductCard } from "@/components/ProductCard";
 import { db } from "@/lib/db";
+import { mainPhoto } from "@/lib/photos";
 import { KOSHER_LABELS, KOSHER_TYPES, kosherLabels } from "@/lib/kosher";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   };
 
   const [products, categories] = await Promise.all([
-    db.product.findMany({ where, orderBy, include: { vendor: { select: { name: true, city: true, state: true, accentColor: true } } } }),
+    db.product.findMany({ where, orderBy, include: { vendor: { select: { name: true, city: true, state: true, accentColor: true } }, ...mainPhoto } }),
     db.product.findMany({ where: { active: true }, distinct: ["category"], select: { category: true }, orderBy: { category: "asc" } }),
   ]);
 

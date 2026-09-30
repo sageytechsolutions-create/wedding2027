@@ -49,7 +49,7 @@ Do **not** run `npm run setup` or the seed against production: it deletes everyt
 
 - [ ] **Vendors** (Admin → Onboard a new vendor): real name, city, kitchen ZIP, and **hechsher** for each.
       Jacques Torres Chocolate and Samantha Granola still need a hechsher and address.
-- [ ] **Products**: real names, prices, photos (image URL), meat/dairy/pareve, labels (Glatt, Cholov Yisroel…), perishable or not.
+- [ ] **Products**: real names, prices, photos (uploaded in the vendor portal), meat/dairy/pareve, labels (Glatt, Cholov Yisroel…), perishable or not.
       The demo "Sample:" products exist only in local/demo databases, not in production.
 - [ ] **NYC courier**: turn on **Picks up** (Admin → Vendors) for each vendor the courier collects from, and confirm the
       courier's price matches the $9.99 local fee (set in `src/lib/config.ts`).
