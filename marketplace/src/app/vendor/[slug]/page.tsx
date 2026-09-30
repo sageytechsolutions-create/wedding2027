@@ -99,7 +99,7 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
                 <select name="status" defaultValue={vo.status} className={field}>
                   {VENDOR_ORDER_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
                 </select>
-                {vo.method === "overnight_shipping" && (
+                {vo.method !== "local_delivery" && (
                   <>
                     <input name="carrier" defaultValue={vo.carrier ?? ""} placeholder="Carrier (UPS, FedEx)" className={field} />
                     <input name="trackingNumber" defaultValue={vo.trackingNumber ?? ""} placeholder="Tracking #" className={field} />
@@ -107,6 +107,11 @@ export default async function VendorDashboard({ params }: { params: Promise<{ sl
                 )}
                 <button className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white">Update</button>
                 <span className="ml-auto text-sm text-stone-500">Payout {formatMoney(vo.vendorPayout)}</span>
+                <p className="w-full text-xs text-stone-500">
+                  {vo.method === "local_delivery"
+                    ? "Marking it “Out for delivery” emails the customer."
+                    : "Enter the carrier and tracking number, then mark it “Shipped”. The customer gets one email with the tracking link."}
+                </p>
               </form>
             </div>
           ))}

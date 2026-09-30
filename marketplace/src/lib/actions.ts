@@ -6,7 +6,9 @@ import { z } from "zod";
 import { requireAdmin, requireVendorAccess } from "./auth";
 import { db } from "./db";
 import { isInCourierArea } from "./fulfillment";
+import { deliver } from "./email/send";
 import { KOSHER_LABELS, KOSHER_TYPES } from "./kosher";
+import { notifyVendorOrderStatus } from "./notifications";
 import { VENDOR_ORDER_STATUSES } from "./orders";
 import { siteUrl, stripe } from "./stripe";
 
@@ -34,6 +36,7 @@ export async function updateVendorOrder(formData: FormData) {
     where: { id: data.id },
     data: { status: data.status, carrier: data.carrier || null, trackingNumber: data.trackingNumber || null },
   });
+  if (data.status !== vendorOrder.status) await notifyVendorOrderStatus(vendorOrder.id);
   revalidatePath(`/vendor/${vendorOrder.vendor.slug}`);
 }
 
@@ -193,4 +196,13 @@ export async function connectStripe(formData: FormData) {
     return_url: `${siteUrl()}/vendor/${vendor.slug}`,
   });
   redirect(link.url);
+}
+
+// Re-sends an email that failed or was only saved to the outbox.
+export async function retryEmail(formData: FormData) {
+  await requireAdmin("/admin/emails");
+  const { id } = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
+  const log = await db.emailLog.findUniqueOrThrow({ where: { id } });
+  if (log.status !== "sent") await deliver(log);
+  revalidatePath("/admin/emails");
 }

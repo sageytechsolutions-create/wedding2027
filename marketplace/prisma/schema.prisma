@@ -151,3 +151,17 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+// Every notification email, kept so each is sent at most once and admins can review them.
+model EmailLog {
+  id        String   @id @default(cuid())
+  // e.g. "order-confirmation:<orderId>"; unique so retries never send twice.
+  key       String   @unique
+  to        String
+  subject   String
+  html      String
+  text      String
+  status    String // sent | outbox (no provider configured) | failed
+  error     String?
+  createdAt DateTime @default(now())
+}

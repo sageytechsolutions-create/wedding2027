@@ -117,6 +117,7 @@ function slugify(s: string): string {
 }
 
 async function main() {
+  await db.emailLog.deleteMany();
   await db.session.deleteMany();
   await db.user.deleteMany();
   await db.orderItem.deleteMany();

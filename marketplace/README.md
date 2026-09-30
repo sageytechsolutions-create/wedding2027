@@ -55,6 +55,18 @@ It prints a generated password. After that, add vendor logins from **Admin → L
 
 Passwords are hashed with scrypt; sessions are random tokens stored hashed in the database, in an httpOnly cookie that lasts 30 days. Repeated wrong passwords lock an email out for 15 minutes.
 
+## Emails
+
+| Email | To | When |
+|---|---|---|
+| Order confirmed | Customer | Payment succeeds (or at checkout in demo mode) |
+| New order | Each login for that vendor | Same time; flags ⚡ priority orders, shows ship-by date and payout |
+| Shipped / Out for delivery | Customer | Vendor marks their part "Shipped" (with carrier tracking link) or "Out for delivery" (courier) |
+
+Each email is sent at most once (a vendor toggling the status back and forth doesn't resend). Every email is kept in **Admin → Emails** with a preview, its status, and a Retry button for failures. A failed email never blocks checkout or order updates.
+
+To actually send them, create a [Resend](https://resend.com) account, verify your domain, and set `RESEND_API_KEY` and `EMAIL_FROM` (an address on that domain) in `.env`. Without a key, emails are saved to the outbox only.
+
 ## Turning on Stripe payments
 
 Without keys, checkout runs in demo mode (orders are marked paid, no card is charged).
@@ -68,7 +80,7 @@ Without keys, checkout runs in demo mode (orders are marked paid, no card is cha
 
 1. **Password reset by email**: for now an admin resets forgotten passwords. The sign-in lockout is per server instance; move it to the database or Redis if you run several servers.
 2. **Refunds**: cancelling a vendor order doesn't refund the customer or reverse the payout yet; do it in the Stripe dashboard for now.
-3. **Emails/SMS**: order confirmation, shipped and delivered notifications.
+3. **More notifications**: "delivered" emails, SMS, and password-reset emails.
 4. **Shipping labels**: carrier integration (e.g. Shippo/EasyPost for UPS/FedEx overnight) instead of manual tracking entry.
 5. **Production DB**: switch the Prisma provider to `postgresql` (Supabase) and make search case-insensitive with `mode: "insensitive"`.
 6. Product photo uploads, reviews, a delivery-date picker, and gift scheduling.

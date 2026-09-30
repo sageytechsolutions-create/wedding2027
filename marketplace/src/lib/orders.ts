@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { db } from "./db";
+import { notifyOrderPaid } from "./notifications";
 import { currentStoreStatus } from "./store-hours";
 import { siteUrl, stripe } from "./stripe";
 import { methodLabel, quoteFulfillment, type FulfillmentQuote } from "./fulfillment";
@@ -153,7 +154,11 @@ export async function placeOrder(input: CheckoutInput): Promise<{ number: string
     },
   });
   const orderUrl = `/orders/${order.number}?email=${encodeURIComponent(order.email)}`;
-  if (!stripe) return { number: order.number, redirectUrl: orderUrl };
+  if (!stripe) {
+    // Demo mode: the order is already marked paid.
+    await notifyOrderPaid(order.id);
+    return { number: order.number, redirectUrl: orderUrl };
+  }
 
   const lineItems = plans.flatMap((p) => [
     ...p.group.lines.map((l) => ({
@@ -201,6 +206,7 @@ export async function markOrderPaid(sessionId: string, paymentIntentId: string) 
   // Stripe retries webhooks, so this must be safe to run more than once.
   if (!order || order.paymentStatus === "paid") return;
   await db.order.update({ where: { id: order.id }, data: { paymentStatus: "paid", stripePaymentIntentId: paymentIntentId } });
+  await notifyOrderPaid(order.id);
   await sendPendingPayouts({ orderId: order.id });
 }
 

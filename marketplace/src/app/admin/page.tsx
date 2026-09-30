@@ -41,7 +41,10 @@ export default async function AdminPage() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="font-display text-3xl font-bold">Marketplace admin</h1>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h1 className="font-display text-3xl font-bold">Marketplace admin</h1>
+          <Link href="/admin/emails" className="text-sm font-medium text-brand">Emails →</Link>
+        </div>
 
       </div>
 
