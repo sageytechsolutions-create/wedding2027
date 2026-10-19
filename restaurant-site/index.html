@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Golpar Persian Grill</title>
+<title>Eshel Persian Kitchen</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Golpar is a Persian grill and mezze kitchen on the Upper West Side. Saffron chicken jujeh, barg kabob, stews and salads. Order pickup or delivery direct.">
-<meta property="og:title" content="Golpar Persian Grill — Upper West Side">
-<meta property="og:description" content="Charcoal kabobs, saffron rice, slow stews. Order direct for pickup or delivery.">
+<meta name="description" content="Eshel serves Persian-Middle Eastern food on the Upper West Side: Jujeh saffron chicken skewers, Barg beef kabob and chicken shawarma tacos. Order pickup or delivery direct.">
+<meta property="og:title" content="Eshel | Persian-Middle Eastern food, Upper West Side NYC">
+<meta property="og:description" content="Jujeh saffron chicken, Barg beef kabob, shawarma tacos. Order direct for pickup or delivery from 507 Columbus Ave.">
+<meta property="og:url" content="https://eshelny.com/">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#14284a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -165,12 +166,12 @@ p{margin:0}
 .gallery{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(180px,22vw);gap:12px;margin-top:32px}
 .shot{position:relative;border:0;padding:0;border-radius:14px;overflow:hidden;cursor:zoom-in;background:var(--band);color:var(--band-ink);text-align:left}
 .shot:nth-child(1){grid-column:span 2;grid-row:span 2}
-.shot:nth-child(4),.shot:nth-child(5),.shot:nth-child(6){grid-column:span 2}
+.shot:nth-child(6),.shot:nth-child(7){grid-column:span 2}
 .shot .art{position:absolute;inset:0;width:100%;height:100%}
 .shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .5s ease}
 .shot:hover img{transform:scale(1.04)}
 .shot .cap{position:absolute;left:0;right:0;bottom:0;padding:40px 16px 14px;background:linear-gradient(transparent,rgba(8,17,32,.82));color:#fff;font:400 1.2rem/1.1 var(--f-display)}
-@media (max-width:760px){.gallery{grid-template-columns:repeat(2,1fr);grid-auto-rows:44vw}.shot:nth-child(1){grid-column:span 2;grid-row:span 1}.shot:nth-child(4),.shot:nth-child(5){grid-column:span 1}}
+@media (max-width:760px){.gallery{grid-template-columns:repeat(2,1fr);grid-auto-rows:44vw}.shot:nth-child(1){grid-column:span 2;grid-row:span 1}.shot:nth-child(6),.shot:nth-child(7){grid-column:span 1}}
 .lightbox{position:fixed;inset:0;z-index:90;background:rgba(6,12,24,.92);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) var(--gutter-r) max(16px,env(safe-area-inset-bottom,0px)) var(--gutter-l)}
 .lightbox figure{margin:0;max-width:min(1000px,100%);width:100%;display:grid;gap:12px;color:#fff}
 .lightbox .frame{position:relative;aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#14284a}
@@ -250,9 +251,9 @@ footer a{color:var(--band-ink)}
 
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Golpar home">
+    <a class="brand" href="#top" aria-label="Eshel home">
       <svg viewBox="0 0 40 40" aria-hidden="true"><path fill="var(--saffron)" d="M20 2l4.6 8.9L34 7.4l-3.5 9.4L38 20l-7.5 3.2L34 32.6l-9.4-3.5L20 38l-4.6-8.9L6 32.6l3.5-9.4L2 20l7.5-3.2L6 7.4l9.4 3.5z"/><circle cx="20" cy="20" r="6" fill="var(--pom)"/></svg>
-      <span data-cfg="name">Golpar</span>
+      <span data-cfg="name">Eshel</span>
     </a>
     <nav class="nav" id="nav" aria-label="Main">
       <a href="#menu">Menu</a><a href="#gallery">Gallery</a><a href="#catering">Catering</a><a href="#visit">Visit</a><a href="#faq">FAQ</a>
@@ -269,23 +270,23 @@ footer a{color:var(--band-ink)}
   <section class="hero" id="top">
     <div class="wrap">
       <div>
-        <p class="eyebrow">Persian grill &amp; mezze · Upper West Side</p>
-        <h1>Saffron, charcoal, and <em>slow</em> stews.</h1>
-        <p class="lede">Jujeh chicken marinated for a full day in saffron and lemon. Barg beef pounded thin and kissed by fire. Rice steamed until the tahdig crackles. Ordered from us directly, so every dollar stays in our kitchen.</p>
+        <p class="eyebrow">Persian-Middle Eastern · Upper West Side</p>
+        <h1>Persian-Middle Eastern eats, <em>NYC.</em></h1>
+        <p class="lede">Jujeh saffron chicken skewers, Barg Persian beef kabob and chicken shawarma tacos, made fresh at 507 Columbus Ave. Order directly from us for pickup or delivery.</p>
         <div class="ctas">
           <a class="btn btn-primary" data-order href="#">Order pickup or delivery</a>
           <a class="btn btn-ghost" href="#menu">See the menu</a>
         </div>
         <div class="quick">
           <span>Today <b data-today-hours>—</b></span>
-          <span>Pickup in <b>~20 min</b></span>
-          <span>Delivery <b>within 2 mi</b></span>
+          <span>Pickup &amp; <b>delivery</b></span>
+          <span>Contact-free <b>available</b></span>
         </div>
       </div>
       <div class="hero-art">
         <canvas data-girih="hero" aria-hidden="true"></canvas>
-        <img src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=900&q=75" alt="Saffron chicken skewers on a charcoal grill" onerror="this.remove()">
-        <div class="tag"><small>House signature</small><strong>Jujeh saffron chicken</strong></div>
+        <img src="https://getsauce.cloud/blobwpv24c7ebe2cb0/wp-content/uploads/sites/2165/2025/12/eshel-jujeh-saffron-chicken-skewers-1.jpg" alt="Jujeh saffron chicken skewers" onerror="this.remove()">
+        <div class="tag"><small>Signature dish</small><strong>Jujeh saffron chicken skewers</strong></div>
       </div>
     </div>
   </section>
@@ -303,17 +304,15 @@ footer a{color:var(--band-ink)}
       <div class="menu-head">
         <div class="stack">
           <p class="eyebrow">The menu</p>
-          <h2>Cooked over hardwood charcoal</h2>
+          <h2>Signature dishes</h2>
         </div>
         <div class="tabs" role="tablist" aria-label="Menu sections" data-tabs></div>
       </div>
       <div class="filters" role="group" aria-label="Dietary filters">
-        <label><input type="checkbox" id="f-veg" value="V"> Vegetarian</label>
-        <label><input type="checkbox" id="f-vegan" value="VG"> Vegan</label>
-        <label><input type="checkbox" id="f-gf" value="GF"> Gluten-free</label>
+        <label><input type="checkbox" id="f-veg" value="V"> Vegetarian only</label>
       </div>
       <div class="dishes" role="tabpanel" data-dishes aria-live="polite"></div>
-      <p class="menu-note">Lunch specials Sun–Thu until 3 PM. Tell us about allergies when you order; our kitchen handles nuts, sesame, dairy and wheat.</p>
+      <p class="menu-note">Highlights only. See the <a data-order href="#">full menu with current prices</a>, including lunch specials. Let us know about allergies when you order.</p>
     </div>
   </section>
 
@@ -322,8 +321,8 @@ footer a{color:var(--band-ink)}
     <div class="wrap">
       <div class="stack">
         <p class="eyebrow">Order direct</p>
-        <h2 id="direct-h">Same kabob, fairer price</h2>
-        <p class="lede">Delivery apps charge restaurants up to 30% per order and pass markups on to you. When you order on our site, the menu costs what it costs in the dining room and the whole amount supports our cooks and our block.</p>
+        <h2 id="direct-h">Order direct, support Eshel</h2>
+        <p class="lede">Skip the third-party apps. When you order on our own website, more of your money stays with our kitchen and our neighborhood instead of going to a platform. Every meal helps a small business on the Upper West Side.</p>
         <div class="ctas" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">
           <a class="btn btn-primary" data-order href="#">Start an order</a>
           <a class="btn btn-ghost" href="#visit">Pick up in person</a>
@@ -331,14 +330,13 @@ footer a{color:var(--band-ink)}
       </div>
       <div class="compare">
         <table>
-          <thead><tr><th>Barg kabob plate</th><th>Golpar.com</th><th>Delivery app</th></tr></thead>
+          <thead><tr><th>&nbsp;</th><th>eshelny.com</th><th>Delivery app</th></tr></thead>
           <tbody>
-            <tr><td>Menu price</td><td class="us">$29.00</td><td>$34.50</td></tr>
-            <tr><td>Service fee</td><td class="us">$0.00</td><td>$4.10</td></tr>
-            <tr><td>Kept by the kitchen</td><td class="us">100%</td><td>~70%</td></tr>
+            <tr><td>Who gets your order total</td><td class="us">Eshel</td><td>Split with the app</td></tr>
+            <tr><td>Who you talk to about your order</td><td class="us">Our team</td><td>App support</td></tr>
+            <tr><td>Order tracking link</td><td class="us">Yes</td><td>Yes</td></tr>
           </tbody>
         </table>
-        <small>Example based on typical third-party pricing. Delivery fee and tip apply either way.</small>
       </div>
     </div>
   </section>
@@ -353,43 +351,29 @@ footer a{color:var(--band-ink)}
     </div>
   </section>
 
-  <section class="section" style="padding-top:0" aria-labelledby="rev-h">
-    <div class="wrap">
-      <div class="stack">
-        <p class="eyebrow">Neighbors say</p>
-        <h2 id="rev-h">4.8 average from 1,200+ reviews</h2>
-      </div>
-      <div class="reviews">
-        <figure class="review"><span class="stars" aria-label="5 out of 5">★★★★★</span><blockquote>The jujeh is the best I've had outside Tehran. Crispy tahdig on the side, every time.</blockquote><cite>Leila R. · Google</cite></figure>
-        <figure class="review"><span class="stars" aria-label="5 out of 5">★★★★★</span><blockquote>Ordered direct for a Friday lunch. Food arrived hot in 25 minutes, and it cost less than the app.</blockquote><cite>Daniel K. · Yelp</cite></figure>
-        <figure class="review"><span class="stars" aria-label="5 out of 5">★★★★★</span><blockquote>They catered our office party for 40. The kabob trays and the fattoush disappeared in minutes.</blockquote><cite>Priya S. · Google</cite></figure>
-      </div>
-    </div>
-  </section>
-
   <section class="band section" id="catering" style="--band:var(--surface);--band-ink:var(--ink);--band-muted:var(--muted)">
     <div class="wrap" style="display:block">
       <div class="cater">
         <div class="stack">
-          <p class="eyebrow" style="color:var(--saffron-ink)">Catering &amp; events</p>
-          <h2>Feed a crowd, Persian style</h2>
-          <p class="lede">Kabob trays, saffron rice by the half-pan, mezze spreads and stews for offices, Shabbat dinners, birthdays and shivas. Give us 48 hours for parties of 15 or more.</p>
+          <p class="eyebrow" style="color:var(--saffron-ink)">Large orders &amp; events</p>
+          <h2>Ordering for a group?</h2>
+          <p class="lede">Office lunches, family dinners, celebrations. Tell us the date, headcount and anything special, and we'll get back to you about what we can prepare.</p>
           <ul>
-            <li>Trays from 10 to 150 guests</li>
-            <li>Kosher-style menu, halal meat, vegetarian and vegan options</li>
-            <li>Delivery and setup across Manhattan</li>
+            <li>Order ahead for a scheduled pickup or delivery</li>
+            <li>Vegetarian dishes available</li>
+            <li>Questions? Call <span data-cfg="phone"></span></li>
           </ul>
         </div>
         <form class="card" id="cater-form" novalidate>
           <div class="field"><label for="c-name">Your name</label><input id="c-name" name="name" required autocomplete="name"></div>
           <div class="field"><label for="c-email">Email</label><input id="c-email" name="email" type="email" required autocomplete="email"></div>
           <div class="field"><label for="c-date">Event date</label><input id="c-date" name="date" type="date" required></div>
-          <div class="field"><label for="c-guests">Guests</label><input id="c-guests" name="guests" type="number" min="10" max="500" value="25" required></div>
+          <div class="field"><label for="c-guests">Guests</label><input id="c-guests" name="guests" type="number" min="5" max="500" value="20" required></div>
           <div class="field full"><label for="c-type">Type of event</label>
-            <select id="c-type" name="type"><option>Office lunch</option><option>Shabbat or holiday dinner</option><option>Birthday or celebration</option><option>Shiva</option><option>Other</option></select></div>
+            <select id="c-type" name="type"><option>Office lunch</option><option>Family dinner</option><option>Birthday or celebration</option><option>Holiday</option><option>Other</option></select></div>
           <div class="field full"><label for="c-notes">Anything we should know?</label><textarea id="c-notes" name="notes" placeholder="Dietary needs, address, budget per person…"></textarea></div>
-          <div class="field full"><button class="btn btn-primary" type="submit">Request a quote</button></div>
-          <div class="form-msg" data-form-msg aria-live="polite">We reply within one business day.</div>
+          <div class="field full"><button class="btn btn-primary" type="submit">Send request</button></div>
+          <div class="form-msg" data-form-msg aria-live="polite">For same-day orders, please call us.</div>
         </form>
       </div>
     </div>
@@ -400,13 +384,13 @@ footer a{color:var(--band-ink)}
       <div>
         <p class="eyebrow">Visit us</p>
         <h2 style="margin-top:14px" data-cfg="address">—</h2>
-        <p class="lede" style="margin-top:12px">On Columbus between 84th and 85th. Take the B or C to 86th St, or the 1 to 86th &amp; Broadway.</p>
+        <p class="lede" style="margin-top:12px">On Columbus Avenue at 85th Street. Nearest subway: B or C to 86th St.</p>
         <table class="hours" data-hours aria-label="Opening hours"></table>
       </div>
       <div class="map">
         <canvas data-map aria-hidden="true"></canvas>
         <div class="pin-card">
-          <strong style="font:400 1.4rem/1.1 var(--f-display)" data-cfg="name">Golpar</strong>
+          <strong style="font:400 1.4rem/1.1 var(--f-display)" data-cfg="name">Eshel</strong>
           <span style="color:var(--muted)" data-cfg="address">—</span>
           <span class="status" data-status><span class="dot"></span><span data-status-text>—</span></span>
           <div class="btns"><a class="btn btn-primary btn-sm" data-directions target="_blank" rel="noopener" href="#">Get directions</a><a class="btn btn-ghost btn-sm" data-tel href="#">Call</a></div>
@@ -423,7 +407,7 @@ footer a{color:var(--band-ink)}
       </div>
       <div class="faq-tools">
         <label for="faq-q" class="eyebrow" style="position:absolute;left:-999px">Search questions</label>
-        <input id="faq-q" type="search" placeholder="Search: delivery, vegan, parking…">
+        <input id="faq-q" type="search" placeholder="Search: delivery, vegetarian, hours…">
       </div>
       <div data-faq></div>
     </div>
@@ -433,9 +417,9 @@ footer a{color:var(--band-ink)}
 <footer>
   <div class="wrap">
     <div class="stack">
-      <a class="brand" href="#top"><span data-cfg="name">Golpar</span></a>
+      <a class="brand" href="#top"><span data-cfg="name">Eshel</span></a>
       <span><span data-cfg="address">—</span> · <a data-tel href="#"><span data-cfg="phone">—</span></a></span>
-      <span>© <span data-year></span> Golpar. Order direct, eat well.</span>
+      <span>© <span data-year></span> Eshel. Persian-Middle Eastern eats, NYC.</span>
     </div>
     <div class="stack" style="align-content:start">
       <button class="theme-btn" data-theme-toggle>Theme: system</button>
@@ -459,81 +443,64 @@ footer a{color:var(--band-ink)}
 <script>
 /* ===== Edit everything about the restaurant here ===== */
 const CONFIG = {
-  name: "Golpar",
-  address: "512 Columbus Ave, New York, NY 10024",
-  phone: "(212) 555-0147",
-  email: "catering@golparnyc.com",
-  orderUrl: "#menu",            // link to your online ordering page
-  cateringEndpoint: "",          // e.g. a Formspree URL; empty = show a ready-to-send summary
+  name: "Eshel",
+  address: "507 Columbus Ave, New York, NY 10024",
+  phone: "(212) 299-4759",
+  url: "https://eshelny.com/",
+  orderUrl: "https://eshelny.com/order/eshel/menu?utm_source=site&utm_medium=order-now",
+  cateringEndpoint: "",          // e.g. a Formspree URL; empty = show a summary to call or text in
   timezone: "America/New_York",
   // 0 = Sunday. Times in 24h. null = closed.
   hours: [["12:00","22:00"],["12:00","22:00"],["12:00","22:00"],["12:00","22:00"],["12:00","22:00"],["11:00","14:00"],null],
-  geo: { lat: 40.7853, lng: -73.9726 }
+  geo: { lat: 40.7853468, lng: -73.9726483 },
+  mapsUrl: "https://maps.google.com/?cid=4703007210193160863"
 };
 
+// Dishes from eshelny.com. Prices live on the ordering page so they never go stale here.
 const MENU = {
-  "Kabobs": [
-    {n:"Jujeh saffron chicken",fa:"جوجه",p:24,d:"Boneless thigh marinated 24 hours in saffron, lemon and onion. Saffron rice, grilled tomato.",t:["GF"],pop:1},
-    {n:"Barg beef kabob",fa:"برگ",p:29,d:"Filet mignon pounded thin, brushed with saffron butter. Rice with sumac.",t:["GF"],pop:1},
-    {n:"Koobideh",fa:"کوبیده",p:22,d:"Two skewers of hand-ground beef and lamb with grated onion and turmeric.",t:["GF"]},
-    {n:"Soltani",p:38,d:"One barg and one koobideh. The classic pairing for big appetites.",t:["GF"]},
-    {n:"Grilled vegetable kabob",p:19,d:"Zucchini, peppers, mushroom and onion with herb oil. Rice or salad.",t:["V","VG","GF"]},
-    {n:"Salmon kabob",p:28,d:"Saffron-lime salmon, dill rice, charred lemon.",t:["GF"]}
+  "Kabobs & mains": [
+    {n:"Jujeh saffron chicken skewers",fa:"جوجه",d:"Saffron-marinated chicken skewers, grilled to order.",t:[],pop:1},
+    {n:"Barg Persian beef kabob",fa:"برگ",d:"The classic Persian kabob of thin-cut beef.",t:[],pop:1},
+    {n:"Chicken shawarma tacos",d:"Our fusion favorite: chicken shawarma served taco-style.",t:[],pop:1}
   ],
-  "Stews & rice": [
-    {n:"Ghormeh sabzi",fa:"قورمه سبزی",p:23,d:"Slow-cooked herbs, kidney beans, dried lime and beef. Served with rice.",t:["GF"],pop:1},
-    {n:"Fesenjan",fa:"فسنجان",p:25,d:"Chicken braised in ground walnut and pomegranate molasses.",t:["GF"]},
-    {n:"Gheimeh bademjan",p:23,d:"Split peas, tomato, beef and fried eggplant.",t:["GF"]},
-    {n:"Albalu polo",fa:"آلبالو پلو",p:14,d:"Sour cherry rice with saffron and pistachio.",t:["V","VG","GF"]},
-    {n:"Tahdig with stew",p:12,d:"A crisp golden rice crust, topped with your choice of stew.",t:["V","GF"]}
-  ],
-  "Mezze & salads": [
-    {n:"Mast-o-khiar",p:9,d:"Yogurt, cucumber, mint, rose petals, walnut.",t:["V","GF"]},
-    {n:"Kashk-e bademjan",p:12,d:"Smoky eggplant, whey, fried mint and onion. Warm lavash.",t:["V"],pop:1},
-    {n:"Fattoush",p:13,d:"Romaine, radish, cucumber, sumac, crisp pita, pomegranate dressing.",t:["V","VG"]},
-    {n:"Beet & arugula salad",p:14,d:"Roasted beets, arugula, feta, toasted walnuts, citrus vinaigrette.",t:["V","GF"]},
-    {n:"Shirazi salad",p:9,d:"Diced cucumber, tomato and onion with lime and dried mint.",t:["V","VG","GF"]},
-    {n:"Roasted cauliflower",p:12,d:"Charred florets, tahini, za'atar, pomegranate seeds.",t:["V","VG","GF"]}
-  ],
-  "Wraps & tacos": [
-    {n:"Chicken shawarma tacos",p:17,d:"Three corn tortillas, shawarma, amba aioli, pickled onion.",t:["GF"],pop:1},
-    {n:"Koobideh wrap",p:16,d:"In lavash with grilled onion, herbs and sumac.",t:[]},
-    {n:"Falafel wrap",p:14,d:"Herb falafel, tahini, Shirazi salad, pickles.",t:["V","VG"]}
-  ],
-  "Sweets & drinks": [
-    {n:"Saffron rosewater ice cream",fa:"بستنی",p:9,d:"Bastani with pistachio and frozen cream shards.",t:["V","GF"]},
-    {n:"Baklava",p:7,d:"Walnut and pistachio, cardamom syrup.",t:["V"]},
-    {n:"Doogh",p:5,d:"Salted yogurt soda with dried mint.",t:["V","GF"]},
-    {n:"Persian tea",p:4,d:"Black tea with cardamom, served with nabat.",t:["V","VG","GF"]}
+  "Salads & sides": [
+    {n:"Beet arugula salad",d:"Roasted beets over peppery arugula.",t:["V"]},
+    {n:"Fattoush salad",d:"Crisp vegetables and toasted pita.",t:[]},
+    {n:"Albalu rice",fa:"آلبالو پلو",d:"Persian rice with sour cherries.",t:[]},
+    {n:"Roasted cauliflower",d:"Oven-roasted until golden.",t:["V"]}
   ]
 };
 
+const IMG = "https://getsauce.cloud/blobwpv24c7ebe2cb0/wp-content/uploads/sites/2165/2025/12/";
 const GALLERY = [
-  {c:"Jujeh saffron chicken",src:"photo-1555939594-58d7cb561ad1",hue:42},
-  {c:"Fattoush",src:"photo-1512621776951-a57141f2eefd",hue:110},
-  {c:"Barg beef kabob",src:"photo-1544025162-d76694265947",hue:10},
-  {c:"The dining room",src:"photo-1517248135467-4c7edcad34c4",hue:215},
-  {c:"Roasted cauliflower",src:"photo-1540189549336-e6e99c3679fe",hue:30},
-  {c:"Mezze spread",src:"photo-1504674900247-0877df9cc836",hue:350}
+  {c:"Jujeh saffron chicken skewers",src:"eshel-jujeh-saffron-chicken-skewers-1.jpg",hue:42},
+  {c:"Fattoush salad",src:"eshel-fattoush-salad.jpg",hue:110},
+  {c:"Barg Persian beef kabob",src:"eshel-barg-persian-beef-kabob.jpg",hue:10},
+  {c:"Chicken shawarma tacos",src:"eshel-chicken-shawarma-tacos-1.jpg",hue:215},
+  {c:"Roasted cauliflower",src:"eshel-roasted-cauliflower.jpg",hue:30},
+  {c:"Albalu rice",src:"eshel-albalu-rice.jpg",hue:350},
+  {c:"Beet arugula salad",src:"eshel-beet-arugula-salad.jpg",hue:330}
 ];
 
+// Answers taken from eshelny.com, deduplicated.
 const FAQ = {
   "Ordering": [
-    ["How do I order online?","Use the Order online button anywhere on this page. Pick pickup or delivery, choose a time, and you'll get a tracking link once the kitchen confirms."],
-    ["Can I schedule an order in advance?","Yes. Choose a later time at checkout, up to 7 days ahead, or call us for anything bigger."],
-    ["Do you offer contact-free delivery?","Yes. Add \"leave at door\" in the delivery notes and the driver will text when it arrives."],
-    ["Why order here instead of a delivery app?","Our menu prices are lower on our own site, there's no service fee, and the restaurant keeps the full amount."]
+    ["How do I order online?","Order directly at eshelny.com/order/eshel/menu using any Order button on this page. You'll get a tracking link once your order is confirmed."],
+    ["Do you offer delivery and pickup?","Yes, both. Pickup is at 507 Columbus Ave, and delivery is available across our neighborhood."],
+    ["Can I schedule an order in advance?","Yes, you can usually schedule ahead in our online ordering. You can also call (212) 299-4759 to place a scheduled order."],
+    ["Do you offer contact-free delivery?","Yes, Eshel provides contact-free delivery."],
+    ["Are there deals for ordering online?","Check our website and social media for current promotions, such as offers for first-time and online orders."]
   ],
-  "Food & diet": [
-    ["What are your most popular dishes?","Jujeh saffron chicken, barg beef kabob, ghormeh sabzi and the chicken shawarma tacos. Look for the Popular tag on the menu."],
-    ["Do you have vegetarian or vegan options?","Plenty. Use the Vegetarian and Vegan filters on the menu: vegetable kabob, albalu polo, fattoush, Shirazi salad, roasted cauliflower and falafel are all vegan."],
-    ["Is the meat halal?","All our chicken, beef and lamb come from halal-certified suppliers."],
-    ["Can you handle allergies?","Tell us when you order. Our kitchen uses nuts, sesame, dairy and wheat, so we can't promise zero cross-contact."]
+  "Food": [
+    ["What kind of food does Eshel serve?","Authentic Persian and Middle Eastern cuisine: signature kabobs, fresh salads, stews, and fusion dishes like our chicken shawarma tacos."],
+    ["What are the most popular dishes?","Jujeh saffron chicken skewers, Barg Persian beef kabob and chicken shawarma tacos."],
+    ["Do you have vegetarian options?","Yes, including the roasted cauliflower and the beet arugula salad. Use the Vegetarian filter on the menu."],
+    ["Do you serve lunch and dinner?","Yes, both, with special lunch prices."]
   ],
   "Visiting": [
-    ["What are your hours?","Sunday to Thursday 12 PM to 10 PM, Friday 11 AM to 2 PM, closed Saturday. Delivery runs during the same hours."],
-    ["Do you take reservations?","Walk-ins are welcome. For tables of 6 or more, call ahead and we'll set something up."],
-    ["Is there parking?","Street parking only. The garage on W 84th St is a two-minute walk."]
+    ["What are your hours?","Sunday to Thursday 12 PM to 10 PM, Friday 11 AM to 2 PM. Closed Saturday."],
+    ["Where are you located?","507 Columbus Ave, New York, NY 10024, on the Upper West Side."],
+    ["What is your phone number?","(212) 299-4759."]
   ]
 };
 
@@ -551,7 +518,7 @@ function toast(msg){ const t=$("[data-toast]"); t.textContent=msg; t.hidden=fals
 $$("[data-cfg]").forEach(el => el.textContent = CONFIG[el.dataset.cfg]);
 $$("[data-tel]").forEach(el => el.href = telHref);
 $$("[data-order]").forEach(el => el.href = CONFIG.orderUrl);
-$$("[data-directions]").forEach(el => el.href = "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(CONFIG.address));
+$$("[data-directions]").forEach(el => el.href = CONFIG.mapsUrl || "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(CONFIG.address));
 $("[data-year]").textContent = new Date().getFullYear();
 $$("[data-copy]").forEach(b => b.addEventListener("click", async () => {
   const v = CONFIG[b.dataset.copy];
@@ -589,7 +556,7 @@ renderHours(); setInterval(renderHours, 60000);
 // menu
 const sections = Object.keys(MENU);
 let active = sections[0];
-try { const s = localStorage.getItem("golpar-tab"); if (sections.includes(s)) active = s; } catch {}
+try { const s = localStorage.getItem("eshel-tab"); if (sections.includes(s)) active = s; } catch {}
 const tabsEl = $("[data-tabs]");
 tabsEl.innerHTML = sections.map(s=>`<button class="tab" role="tab" id="tab-${s.replace(/\W+/g,"-")}" aria-selected="${s===active}">${s}</button>`).join("");
 function renderMenu(){
@@ -599,12 +566,11 @@ function renderMenu(){
   $("[data-dishes]").innerHTML = items.length ? items.map(it=>`
     <article class="dish">
       <h3>${it.n}${it.fa?`<span class="fa" lang="fa">${it.fa}</span>`:""}</h3>
-      <span class="price">$${it.p.toFixed(2)}</span>
       <p>${it.d}</p>
-      <div class="tags">${it.pop?'<span class="chip pop">Popular</span>':""}${it.t.map(t=>`<span class="chip" title="${{V:"Vegetarian",VG:"Vegan",GF:"Gluten-free"}[t]}">${t}</span>`).join("")}</div>
+      <div class="tags">${it.pop?'<span class="chip pop">Popular</span>':""}${it.t.map(t=>`<span class="chip">${{V:"Vegetarian"}[t]}</span>`).join("")}</div>
     </article>`).join("") : `<p class="empty">Nothing in ${active} matches those filters. Try another section or clear a filter.</p>`;
 }
-tabsEl.addEventListener("click", e => { const b=e.target.closest(".tab"); if(!b) return; active=b.textContent; try{localStorage.setItem("golpar-tab",active)}catch{} renderMenu(); });
+tabsEl.addEventListener("click", e => { const b=e.target.closest(".tab"); if(!b) return; active=b.textContent; try{localStorage.setItem("eshel-tab",active)}catch{} renderMenu(); });
 tabsEl.addEventListener("keydown", e => {
   if(!["ArrowLeft","ArrowRight"].includes(e.key)) return;
   const i = sections.indexOf(active) + (e.key==="ArrowRight"?1:-1);
@@ -643,12 +609,12 @@ function tileArt(canvas, hue){
 
 // gallery + lightbox
 const gal = $("[data-gallery]");
-const imgUrl = (id,w) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=75`;
-gal.innerHTML = GALLERY.map((g,i)=>`<button class="shot" data-i="${i}" aria-label="View photo: ${g.c}"><canvas class="art" aria-hidden="true"></canvas><img loading="lazy" src="${imgUrl(g.src,800)}" alt="${g.c}" onerror="this.remove()"><span class="cap">${g.c}</span></button>`).join("");
+const imgUrl = (file) => IMG + file;
+gal.innerHTML = GALLERY.map((g,i)=>`<button class="shot" data-i="${i}" aria-label="View photo: ${g.c}"><canvas class="art" aria-hidden="true"></canvas><img loading="lazy" src="${imgUrl(g.src)}" alt="${g.c}" onerror="this.remove()"><span class="cap">${g.c}</span></button>`).join("");
 const lb = $("[data-lightbox]"); let lbI = 0, lastFocus;
 function showLb(i){
   lbI = (i+GALLERY.length)%GALLERY.length; const g = GALLERY[lbI];
-  const fr = $("[data-lb-frame]"); fr.innerHTML = `<canvas></canvas><img src="${imgUrl(g.src,1600)}" alt="${g.c}" onerror="this.remove()">`;
+  const fr = $("[data-lb-frame]"); fr.innerHTML = `<canvas></canvas><img src="${imgUrl(g.src)}" alt="${g.c}" onerror="this.remove()">`;
   lb.hidden = false; tileArt($("canvas",fr), g.hue);
   $("[data-lb-cap]").textContent = g.c; $("[data-lb-count]").textContent = `${lbI+1} / ${GALLERY.length}`;
 }
@@ -703,7 +669,7 @@ $("#faq-q").addEventListener("input", e=>renderFaq(e.target.value)); renderFaq()
 
 // catering form
 const form = $("#cater-form"), msg = $("[data-form-msg]");
-$("#c-date").min = new Date(Date.now()+2*864e5).toISOString().slice(0,10);
+$("#c-date").min = new Date().toISOString().slice(0,10);
 form.addEventListener("submit", async e => {
   e.preventDefault();
   const bad = $$("input[required]",form).find(i=>!i.checkValidity());
@@ -713,12 +679,12 @@ form.addEventListener("submit", async e => {
     try{
       const r = await fetch(CONFIG.cateringEndpoint,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(d)});
       if(!r.ok) throw 0;
-      msg.className="form-msg ok"; msg.textContent=`Thanks, ${d.name}. We got your request and will reply to ${d.email} within one business day.`; form.reset(); return;
+      msg.className="form-msg ok"; msg.textContent=`Thanks, ${d.name}. We got your request and will reply to ${d.email}.`; form.reset(); return;
     }catch{ /* fall through to manual summary */ }
   }
   const summary = `Catering request\nName: ${d.name}\nEmail: ${d.email}\nDate: ${d.date}\nGuests: ${d.guests}\nEvent: ${d.type}\nNotes: ${d.notes||"-"}`;
   msg.className="form-msg";
-  msg.innerHTML = `Your request is ready. Send it to <b>${CONFIG.email}</b> or call ${CONFIG.phone}.<pre>${summary.replace(/</g,"&lt;")}</pre>`;
+  msg.innerHTML = `Your request is ready. Call us at <b>${CONFIG.phone}</b> and we\'ll take it from there.<pre>${summary.replace(/</g,"&lt;")}</pre>`;
   try{ await navigator.clipboard.writeText(summary); toast("Request copied to clipboard"); }catch{}
 });
 
@@ -729,19 +695,19 @@ nav.addEventListener("click",e=>{ if(e.target.tagName==="A"){ nav.classList.remo
 
 // theme toggle: system → light → dark
 const modes=["system","light","dark"]; let mode="system";
-try{ mode = localStorage.getItem("golpar-theme") || "system"; }catch{}
+try{ mode = localStorage.getItem("eshel-theme") || "system"; }catch{}
 function applyTheme(){ if(mode==="system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.dataset.theme=mode;
   $("[data-theme-toggle]").textContent="Theme: "+mode; drawAll(); }
-$("[data-theme-toggle]").addEventListener("click",()=>{ mode=modes[(modes.indexOf(mode)+1)%3]; try{localStorage.setItem("golpar-theme",mode)}catch{} applyTheme(); });
+$("[data-theme-toggle]").addEventListener("click",()=>{ mode=modes[(modes.indexOf(mode)+1)%3]; try{localStorage.setItem("eshel-theme",mode)}catch{} applyTheme(); });
 applyTheme();
 
 // structured data for search engines (Restaurant + FAQ)
 const ld = document.createElement("script"); ld.type="application/ld+json";
 const iso = t=>t; const dayNames=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 ld.textContent = JSON.stringify([{
-  "@context":"https://schema.org","@type":"Restaurant",name:CONFIG.name,servesCuisine:["Persian","Middle Eastern"],priceRange:"$$",
+  "@context":"https://schema.org","@type":"Restaurant",name:CONFIG.name,url:CONFIG.url,menu:CONFIG.orderUrl,servesCuisine:["Persian","Middle Eastern"],
   telephone:CONFIG.phone,address:{"@type":"PostalAddress",streetAddress:CONFIG.address.split(",")[0],addressLocality:"New York",addressRegion:"NY",postalCode:"10024",addressCountry:"US"},
-  geo:{"@type":"GeoCoordinates",latitude:CONFIG.geo.lat,longitude:CONFIG.geo.lng},acceptsReservations:"True",
+  geo:{"@type":"GeoCoordinates",latitude:CONFIG.geo.lat,longitude:CONFIG.geo.lng},
   openingHoursSpecification:CONFIG.hours.map((h,i)=>h&&{"@type":"OpeningHoursSpecification",dayOfWeek:dayNames[i],opens:iso(h[0]),closes:iso(h[1])}).filter(Boolean)
 },{
   "@context":"https://schema.org","@type":"FAQPage",
